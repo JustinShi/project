@@ -1,0 +1,5 @@
+---
+alwaysApply: true
+---
+
+-使用uv安装python依赖，使用uv run运行python脚本

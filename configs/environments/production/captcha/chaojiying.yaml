@@ -1,0 +1,12 @@
+# 生产环境配置
+
+# 生产环境使用更长的超时时间
+timeout: 60
+max_retries: 5
+
+# 生产环境日志简化
+advanced:
+  log_requests: false
+  log_responses: false
+  retry_delay: 2.0
+  retry_backoff: 2.0

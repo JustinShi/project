@@ -1,0 +1,12 @@
+# 测试环境配置
+
+# 测试环境使用中等超时时间
+timeout: 20
+max_retries: 2
+
+# 测试环境日志配置
+advanced:
+  log_requests: true
+  log_responses: false
+  retry_delay: 1.0
+  retry_backoff: 2.0

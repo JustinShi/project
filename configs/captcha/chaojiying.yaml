@@ -1,0 +1,43 @@
+# 超级鹰验证码识别配置
+# 注意：私密信息通过环境变量设置
+
+# 网络配置
+timeout: 30
+max_retries: 3
+
+# API 端点
+upload_url: "http://upload.chaojiying.net/Upload/Processing.php"
+report_url: "http://upload.chaojiying.net/Upload/ReportError.php"
+
+# 请求头配置
+user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+
+# 默认验证码类型
+default_codetype: 1902
+
+# 支持的验证码类型
+supported_codetypes:
+  1902: "通用数字英文验证码"
+  1004: "4位纯数字验证码"
+  1005: "5位纯数字验证码"
+  1006: "6位纯数字验证码"
+  2004: "4位纯英文验证码"
+  3004: "4位英文数字验证码"
+  3005: "5位英文数字验证码"
+  3006: "6位英文数字验证码"
+  4004: "4位纯中文验证码"
+  5000: "无类型验证码"
+
+# 高级配置
+advanced:
+  retry_delay: 1.0
+  retry_backoff: 2.0
+  max_file_size: 5242880  # 5MB
+  allowed_extensions:
+    - ".jpg"
+    - ".jpeg"
+    - ".png"
+    - ".gif"
+    - ".bmp"
+  log_requests: true
+  log_responses: false
