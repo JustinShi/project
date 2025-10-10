@@ -55,6 +55,10 @@ coverage.xml
 logs/*.log
 *.log
 
+# Database
+data/*.db
+data/*.db-*
+
 # OS
 .DS_Store
 .DS_Store?

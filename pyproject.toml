@@ -1,43 +1,55 @@
 [project]
-name = "my_platform"
+name = "binance-alpha-oto"
 version = "0.1.0"
-description = "多项目平台 - 交易"
+description = "币安多用户Alpha代币OTO订单自动交易系统"
 authors = [
     {name = "Your Name", email = "your.email@example.com"}
 ]
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.11"
 dependencies = [
-    # 通用依赖
-    "redis>=4.5.0",
+    # Web框架
+    "fastapi>=0.104.0",
+    "uvicorn[standard]>=0.24.0",
+    # 数据库和ORM
+    "sqlalchemy[asyncio]>=2.0.0",
+    "aiosqlite>=0.19.0",
+    "alembic>=1.12.0",
+    # 数据验证和配置
+    "pydantic>=2.5.0",
+    "pydantic-settings>=2.1.0",
+    # Redis缓存
+    "redis>=5.0.0",
+    # HTTP客户端
+    "httpx>=0.25.0",
+    # WebSocket
+    "websockets>=12.0",
+    # 加密
+    "cryptography>=41.0.0",
+    # 日志
+    "structlog>=23.2.0",
+    # API限流
+    "aiolimiter>=1.1.0",
+    # 环境变量
     "python-dotenv>=1.0.0",
-    "pydantic>=2.0.0",
-    "pydantic-settings>=2.0.0",
-    "loguru>=0.7.0",
-    "sqlalchemy>=2.0.0",
-    "pymysql>=1.1.0",
-    "psycopg2-binary>=2.9.0",
-    "aiohttp>=3.8.0",
-    "pyyaml>=6.0.0",
-    "bandit>=1.7.10",
-    "safety>=3.6.1",
-    # 交易项目专用依赖
-    "ccxt>=4.0.0",
-    "pandas>=2.0.0",
-    "numpy>=1.24.0",
-    "ta-lib>=0.4.0",
-    "websockets>=11.0.0",
-    "asyncio-mqtt>=0.11.0",
+    # CLI工具
+    "typer>=0.9.0",
+    "rich>=13.7.0",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=7.0.0",
+    # 测试工具
+    "pytest>=7.4.0",
     "pytest-asyncio>=0.21.0",
+    "pytest-cov>=4.1.0",
+    "pytest-mock>=3.12.0",
+    # 代码质量
     "ruff>=0.1.0",
-    "pre-commit>=3.5.0",
-    "bandit>=1.7.0",
     "mypy>=1.8.0",
+    "pre-commit>=3.5.0",
+    # 类型检查桩
+    "types-redis>=4.6.0",
 ]
 
 [build-system]
@@ -45,12 +57,12 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/common", "src/trading"]
+packages = ["src/binance"]
 
 # Ruff 配置 - 替代 Black, isort, flake8
 [tool.ruff]
 # 目标 Python 版本
-target-version = "py38"
+target-version = "py311"
 # 行长度限制
 line-length = 88
 # 排除的目录和文件
@@ -110,7 +122,7 @@ ignore = [
 
 # 导入排序配置
 [tool.ruff.lint.isort]
-known-first-party = ["src.common", "src.trading"]
+known-first-party = ["binance"]
 force-single-line = false
 lines-after-imports = 2
 

@@ -1,0 +1,385 @@
+# WebSocket消息格式定义
+# 币安Alpha代币OTO交易系统
+
+# 本文档定义了系统使用的WebSocket消息格式
+# 包括：价格数据推送、订单状态推送
+
+---
+
+## 1. 价格数据WebSocket
+
+### 连接信息
+- **URL**: `wss://nbstream.binance.com/w3w/wsa/stream`
+- **订阅格式**: `{symbol}@aggTrade`（如 `alpha_373usdt@aggTrade`）
+
+### 订阅消息
+
+```json
+{
+  "method": "SUBSCRIBE",
+  "params": [
+    "alpha_373usdt@aggTrade"
+  ],
+  "id": 1
+}
+```
+
+### 聚合成交数据推送
+
+**消息类型**: `aggTrade`
+
+**消息示例**:
+```json
+{
+  "e": "aggTrade",
+  "E": 1699999999999,
+  "s": "ALPHA_373USDT",
+  "a": 12345,
+  "p": "1.2345",
+  "q": "100.0",
+  "f": 100,
+  "l": 100,
+  "T": 1699999999999,
+  "m": true,
+  "M": true
+}
+```
+
+**字段说明**:
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| e | string | 事件类型 (aggTrade) |
+| E | long | 事件时间（毫秒） |
+| s | string | 交易对符号 |
+| a | long | 聚合成交ID |
+| p | string | 成交价格 |
+| q | string | 成交数量 |
+| f | long | 第一笔成交ID |
+| l | long | 最后一笔成交ID |
+| T | long | 成交时间（毫秒） |
+| m | boolean | 买方是否maker |
+| M | boolean | 忽略 |
+
+**系统使用**:
+- 提取 `p` (价格) 字段用于订单价格计算
+- 提取 `E` (事件时间) 用于价格历史记录
+- 用于价格波动监控（FR-020）
+
+---
+
+## 2. 订单状态WebSocket
+
+### 连接信息
+- **URL**: `wss://nbstream.binance.com/w3w/stream`
+- **订阅格式**: `alpha@{listenKey}`
+
+### ListenKey获取
+使用币安API获取ListenKey：
+```http
+POST /bapi/defi/v1/private/alpha-trade/get-listen-key
+```
+
+响应：
+```json
+{
+  "code": "000000",
+  "message": "success",
+  "data": {
+    "listenKey": "pqIA6YaQJw...",
+    "validTime": 3600
+  }
+}
+```
+
+### 订阅消息
+
+```json
+{
+  "method": "SUBSCRIBE",
+  "params": [
+    "alpha@pqIA6YaQJw..."
+  ],
+  "id": 1
+}
+```
+
+### 订单更新推送
+
+**消息类型**: `executionReport`
+
+**新订单消息示例**:
+```json
+{
+  "e": "executionReport",
+  "E": 1699999999999,
+  "s": "ALPHA_373",
+  "c": "CLIENT_ORDER_ID_123",
+  "S": "BUY",
+  "o": "LIMIT",
+  "f": "GTC",
+  "q": "100.0",
+  "p": "1.2300",
+  "X": "NEW",
+  "i": "BUY_12345",
+  "l": "0",
+  "z": "0",
+  "L": "0",
+  "n": "0",
+  "T": 1699999999999,
+  "t": -1
+}
+```
+
+**部分成交消息示例**:
+```json
+{
+  "e": "executionReport",
+  "E": 1700000010000,
+  "s": "ALPHA_373",
+  "c": "CLIENT_ORDER_ID_123",
+  "S": "BUY",
+  "o": "LIMIT",
+  "f": "GTC",
+  "q": "100.0",
+  "p": "1.2300",
+  "X": "PARTIALLY_FILLED",
+  "i": "BUY_12345",
+  "l": "30.0",
+  "z": "30.0",
+  "L": "1.2300",
+  "n": "0.01",
+  "T": 1700000010000,
+  "t": 67890
+}
+```
+
+**完全成交消息示例**:
+```json
+{
+  "e": "executionReport",
+  "E": 1700000020000,
+  "s": "ALPHA_373",
+  "c": "CLIENT_ORDER_ID_123",
+  "S": "BUY",
+  "o": "LIMIT",
+  "f": "GTC",
+  "q": "100.0",
+  "p": "1.2300",
+  "X": "FILLED",
+  "i": "BUY_12345",
+  "l": "70.0",
+  "z": "100.0",
+  "L": "1.2300",
+  "n": "0.024",
+  "T": 1700000020000,
+  "t": 67891
+}
+```
+
+**字段说明**:
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| e | string | 事件类型 (executionReport) |
+| E | long | 事件时间（毫秒） |
+| s | string | 交易对符号 |
+| c | string | 客户端订单ID |
+| S | string | 订单方向 (BUY/SELL) |
+| o | string | 订单类型 (LIMIT/MARKET) |
+| f | string | 有效期 (GTC/IOC/FOK) |
+| q | string | 订单数量 |
+| p | string | 订单价格 |
+| X | string | 订单状态 |
+| i | string | 订单ID（交易所） |
+| l | string | 最后成交数量 |
+| z | string | 累计成交数量 |
+| L | string | 最后成交价格 |
+| n | string | 手续费 |
+| T | long | 成交时间（毫秒） |
+| t | long | 成交ID（-1表示无成交） |
+
+**订单状态枚举** (`X` 字段):
+
+| 状态 | 说明 |
+|------|------|
+| NEW | 新订单已接受 |
+| PARTIALLY_FILLED | 部分成交 |
+| FILLED | 完全成交 |
+| CANCELED | 已取消 |
+| PENDING_CANCEL | 取消中 |
+| REJECTED | 已拒绝 |
+| EXPIRED | 已过期 |
+
+**系统处理逻辑**:
+
+```python
+# 伪代码示例
+def handle_order_update(message: dict):
+    order_id = message['i']
+    status = message['X']
+    filled_qty = Decimal(message['z'])
+    total_qty = Decimal(message['q'])
+    
+    if status == 'NEW':
+        # 更新本地订单状态为PENDING
+        update_order_status(order_id, 'PENDING')
+    
+    elif status == 'PARTIALLY_FILLED':
+        # 更新部分成交数量
+        update_filled_quantity(order_id, filled_qty)
+        # 检查超时（FR-012, FR-018）
+        if is_timeout(order_id):
+            cancel_oto_order_pair(order_id)
+            resubmit_new_order()
+    
+    elif status == 'FILLED':
+        # 订单完全成交
+        update_order_status(order_id, 'FILLED')
+        # 检查OTO订单对是否都完成
+        if both_orders_filled(oto_pair_id):
+            # 进行下一轮交易（FR-011）
+            trigger_next_trading_cycle()
+    
+    elif status == 'CANCELED':
+        # 订单已取消
+        update_order_status(order_id, 'CANCELLED')
+    
+    # 更新交易统计
+    update_trading_statistics(user_id, filled_qty, message['L'])
+```
+
+---
+
+## 3. 系统内部事件（本地消息）
+
+### 交易状态变更事件
+
+**事件名称**: `trading_status_changed`
+
+**消息结构**:
+```json
+{
+  "event": "trading_status_changed",
+  "userId": 123,
+  "oldStatus": "RUNNING",
+  "newStatus": "PAUSED_PRICE_VOLATILITY",
+  "reason": "价格1分钟内波动超过2%阈值",
+  "timestamp": "2025-10-09T12:34:56Z"
+}
+```
+
+### 余额不足通知
+
+**事件名称**: `insufficient_balance`
+
+**消息结构**:
+```json
+{
+  "event": "insufficient_balance",
+  "userId": 123,
+  "requiredBalance": "1000.0",
+  "availableBalance": "500.0",
+  "asset": "USDT",
+  "action": "trading_paused",
+  "timestamp": "2025-10-09T12:34:56Z"
+}
+```
+
+### WebSocket连接状态变更
+
+**事件名称**: `websocket_connection_changed`
+
+**消息结构**:
+```json
+{
+  "event": "websocket_connection_changed",
+  "connectionType": "order_updates",
+  "userId": 123,
+  "status": "disconnected",
+  "action": "trading_paused",
+  "timestamp": "2025-10-09T12:34:56Z"
+}
+```
+
+### 价格波动告警
+
+**事件名称**: `price_volatility_alert`
+
+**消息结构**:
+```json
+{
+  "event": "price_volatility_alert",
+  "symbol": "KOGE",
+  "volatility": "2.5",
+  "threshold": "2.0",
+  "minPrice": "1.20",
+  "maxPrice": "1.23",
+  "windowSeconds": 60,
+  "action": "trading_paused",
+  "timestamp": "2025-10-09T12:34:56Z"
+}
+```
+
+---
+
+## 4. 心跳和保活
+
+### 价格WebSocket心跳
+
+币安WebSocket会定期发送ping消息，客户端需回复pong：
+
+**接收**:
+```json
+{
+  "ping": 1699999999999
+}
+```
+
+**响应**:
+```json
+{
+  "pong": 1699999999999
+}
+```
+
+### ListenKey保活
+
+每30分钟调用一次续期API：
+
+```http
+PUT /bapi/defi/v1/private/alpha-trade/keep-alive?listenKey=pqIA6YaQJw...
+```
+
+---
+
+## 消息处理流程图
+
+```
+价格推送 (aggTrade)
+    ↓
+存入价格历史 (Redis/DB)
+    ↓
+检查价格波动 (1分钟窗口)
+    ↓
+如果超过阈值 → 暂停交易 + 发送告警
+    ↓
+否则 → 更新最新价格 → 用于下次订单计算
+
+
+订单推送 (executionReport)
+    ↓
+更新本地订单状态 (状态机)
+    ↓
+根据状态分支处理:
+    NEW → 记录订单创建
+    PARTIALLY_FILLED → 检查超时 → 超时则取消重新下单
+    FILLED → 检查OTO对是否都完成 → 完成则触发下一轮
+    CANCELED → 记录取消 → 如果需要重新下单
+```
+
+---
+
+**文档版本**: 1.0.0  
+**最后更新**: 2025-10-09
+

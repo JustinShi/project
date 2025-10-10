@@ -1,0 +1,55 @@
+# 统一交易配置文件
+
+# ============================================================================
+# 全局设置
+# ============================================================================
+global_settings:
+  # 交易参数（刷量策略：高买低卖）
+  default_buy_offset_percentage: 10           # 默认买入溢价 0.5%（高于市价）
+  default_sell_profit_percentage: 10          # 默认卖出折扣 1.0%（低于买价）
+  default_trade_interval_seconds: 1            # 默认交易间隔 1 秒
+  default_single_trade_amount_usdt: 200         # 默认单次交易金额 30 USDT
+  
+  # 风控参数
+  max_concurrent_users: 10                     # 最大并发用户数
+  max_price_volatility_percentage: 5.0         # 最大价格波动 5%
+  max_retry_attempts: 3                        # 最大重试次数
+  retry_delay_seconds: 5                       # 重试延迟（秒）
+  order_timeout_seconds: 300                   # 订单超时时间 5 分钟
+
+
+# ============================================================================
+# 策略配置
+# ============================================================================
+strategies:
+  # KOGE 刷量策略
+  - strategy_id: "koge_volume_boost"
+    strategy_name: "KOGE 刷量策略"
+    enabled: false
+    target_token: KOGE
+    target_chain: BSC
+    target_volume: 16384                       # 目标交易量（USDT）
+    user_ids: [1]                              # 参与用户
+    # 其他参数使用全局默认值
+
+  # AOP 测试策略
+  - strategy_id: "aop_test"
+    strategy_name: "AOP 测试策略"
+    enabled: true
+    target_token: AOP
+    target_chain: BSC
+    target_volume: 5000
+    #single_trade_amount_usdt: 10               # 覆盖全局默认值
+    #trade_interval_seconds: 2                  # 覆盖全局默认值
+    user_ids: [1]
+
+
+# ============================================================================
+# 用户自定义配置（可选，仅在需要时配置）
+# ============================================================================
+user_overrides: []
+  # 示例：用户 1 覆盖 koge_volume_boost 策略的单次金额
+  # - user_id: 1
+  #   strategies:
+  #     koge_volume_boost:
+  #       single_trade_amount_usdt: 50

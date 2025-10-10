@@ -1,0 +1,428 @@
+openapi: 3.0.3
+info:
+  title: Binance Private API Contracts
+  description: |
+    币安私有API接口定义，用于OTO交易系统
+    基于 docs/binance/api.md 中的API文档
+  version: 1.0.0
+  contact:
+    name: Binance Alpha Trading System
+
+servers:
+  - url: https://www.binance.com
+    description: 币安生产环境
+  - url: https://native.mokexapp.me
+    description: 币安备用API
+
+security:
+  - HeaderCookieAuth: []
+
+paths:
+  /bapi/defi/v1/private/wallet-direct/buw/wallet/today/user-volume:
+    get:
+      summary: 查询用户今日交易量
+      operationId: getUserVolume
+      tags:
+        - Trading
+      responses:
+        '200':
+          description: 成功返回交易量数据
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserVolumeResponse'
+              example:
+                code: "000000"
+                message: success
+                data:
+                  volume: "1234.56"
+                  count: 42
+                success: true
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /bapi/defi/v1/public/alpha-trade/aggTicker24:
+    get:
+      summary: 查询代币信息（24小时聚合行情）
+      operationId: getTokenInfo
+      tags:
+        - Market Data
+      parameters:
+        - name: dataType
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [aggregate]
+          example: aggregate
+      responses:
+        '200':
+          description: 成功返回代币信息
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenInfoResponse'
+
+  /bapi/defi/v1/public/alpha-trade/get-exchange-info:
+    get:
+      summary: 查询交易精度信息
+      operationId: getExchangeInfo
+      tags:
+        - Market Data
+      responses:
+        '200':
+          description: 成功返回精度信息
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExchangeInfoResponse'
+              example:
+                code: "000000"
+                message: success
+                data:
+                  symbols:
+                    - symbol: ALPHA_373
+                      status: TRADING
+                      baseAsset: KOGE
+                      quoteAsset: USDT
+                      tradeDecimal: 8
+                      decimals: 18
+
+  /bapi/defi/v1/private/wallet-direct/cloud-wallet/alpha:
+    get:
+      summary: 查询Alpha钱包余额
+      operationId: getAlphaWalletBalance
+      tags:
+        - Wallet
+      parameters:
+        - name: includeCex
+          in: query
+          required: false
+          schema:
+            type: integer
+            enum: [0, 1]
+          example: 1
+      responses:
+        '200':
+          description: 成功返回余额信息
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WalletBalanceResponse'
+              example:
+                code: "000000"
+                message: success
+                data:
+                  balances:
+                    - asset: USDT
+                      free: "1000.50"
+                      locked: "100.00"
+                    - asset: KOGE
+                      free: "5000.123456"
+                      locked: "0"
+
+  /bapi/asset/v1/private/alpha-trade/oto-order/place:
+    post:
+      summary: 提交OTO订单（反向订单）
+      operationId: placeOTOOrder
+      tags:
+        - Trading
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OTOOrderRequest'
+            example:
+              symbol: ALPHA_373
+              side: BUY
+              buyQuantity: "100.0"
+              buyPrice: "1.23"
+              sellQuantity: "100.0"
+              sellPrice: "1.27"
+      responses:
+        '200':
+          description: 订单成功提交
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OTOOrderResponse'
+              example:
+                code: "000000"
+                message: success
+                data:
+                  buyOrderId: "BUY_12345"
+                  sellOrderId: "SELL_12346"
+                  status: NEW
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /bapi/defi/v1/private/alpha-trade/get-listen-key:
+    post:
+      summary: 获取WebSocket ListenKey
+      operationId: getListenKey
+      tags:
+        - WebSocket
+      responses:
+        '200':
+          description: 成功返回ListenKey
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListenKeyResponse'
+              example:
+                code: "000000"
+                message: success
+                data:
+                  listenKey: "pqIA6YaQJw..."
+                  validTime: 3600
+
+  /bapi/defi/v1/private/alpha-trade/keep-alive:
+    put:
+      summary: 延长ListenKey有效期
+      operationId: keepAliveListenKey
+      tags:
+        - WebSocket
+      parameters:
+        - name: listenKey
+          in: query
+          required: true
+          schema:
+            type: string
+          example: pqIA6YaQJw...
+      responses:
+        '200':
+          description: 成功续期
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+components:
+  securitySchemes:
+    HeaderCookieAuth:
+      type: apiKey
+      in: header
+      name: X-Custom-Headers
+      description: |
+        使用自定义headers和cookies进行认证
+        需要在请求中包含完整的headers和cookies信息
+
+  schemas:
+    UserVolumeResponse:
+      type: object
+      properties:
+        code:
+          type: string
+          example: "000000"
+        message:
+          type: string
+          example: success
+        data:
+          type: object
+          properties:
+            volume:
+              type: string
+              description: 今日交易量（USDT）
+            count:
+              type: integer
+              description: 交易笔数
+        success:
+          type: boolean
+
+    TokenInfoResponse:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              symbol:
+                type: string
+              lastPrice:
+                type: string
+              priceChange:
+                type: string
+              priceChangePercent:
+                type: string
+              volume:
+                type: string
+              quoteVolume:
+                type: string
+
+    ExchangeInfoResponse:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        data:
+          type: object
+          properties:
+            symbols:
+              type: array
+              items:
+                type: object
+                properties:
+                  symbol:
+                    type: string
+                    description: 交易对符号
+                  status:
+                    type: string
+                    enum: [TRADING, HALTED]
+                  baseAsset:
+                    type: string
+                  quoteAsset:
+                    type: string
+                  tradeDecimal:
+                    type: integer
+                    description: 交易精度（小数位数）
+                  decimals:
+                    type: integer
+                    description: 代币精度（小数位数）
+
+    WalletBalanceResponse:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        data:
+          type: object
+          properties:
+            balances:
+              type: array
+              items:
+                type: object
+                properties:
+                  asset:
+                    type: string
+                  free:
+                    type: string
+                    description: 可用余额
+                  locked:
+                    type: string
+                    description: 冻结余额
+
+    OTOOrderRequest:
+      type: object
+      required:
+        - symbol
+        - side
+        - buyQuantity
+        - buyPrice
+        - sellQuantity
+        - sellPrice
+      properties:
+        symbol:
+          type: string
+          description: 交易对符号（如ALPHA_373）
+        side:
+          type: string
+          enum: [BUY, SELL]
+          description: 订单方向
+        buyQuantity:
+          type: string
+          description: 买单数量
+        buyPrice:
+          type: string
+          description: 买单价格
+        sellQuantity:
+          type: string
+          description: 卖单数量
+        sellPrice:
+          type: string
+          description: 卖单价格
+
+    OTOOrderResponse:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        data:
+          type: object
+          properties:
+            buyOrderId:
+              type: string
+              description: 买单订单ID
+            sellOrderId:
+              type: string
+              description: 卖单订单ID
+            status:
+              type: string
+              enum: [NEW, PENDING, FILLED, CANCELLED]
+
+    ListenKeyResponse:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        data:
+          type: object
+          properties:
+            listenKey:
+              type: string
+              description: WebSocket连接密钥
+            validTime:
+              type: integer
+              description: 有效时间（秒）
+
+    SuccessResponse:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        success:
+          type: boolean
+
+    ErrorResponse:
+      type: object
+      properties:
+        code:
+          type: string
+          example: "400001"
+        message:
+          type: string
+          example: Invalid parameters
+        success:
+          type: boolean
+          example: false
+
+  responses:
+    UnauthorizedError:
+      description: 认证失败或过期
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            code: "401000"
+            message: Unauthorized
+            success: false
+
+    BadRequestError:
+      description: 请求参数错误
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            code: "400001"
+            message: Invalid parameters
+            success: false
+

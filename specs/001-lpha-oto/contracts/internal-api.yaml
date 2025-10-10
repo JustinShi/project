@@ -1,0 +1,709 @@
+openapi: 3.0.3
+info:
+  title: Binance Alpha OTO Trading System Internal API
+  description: |
+    币安Alpha代币OTO订单自动交易系统的内部API定义
+    提供用户管理、交易配置、订单查询、交易控制等功能
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8000/api/v1
+    description: 开发环境
+  - url: https://trading.example.com/api/v1
+    description: 生产环境
+
+tags:
+  - name: Users
+    description: 用户管理
+  - name: Trading
+    description: 交易管理和控制
+  - name: Orders
+    description: 订单查询
+  - name: Configuration
+    description: 交易配置管理
+  - name: Statistics
+    description: 交易统计和报表
+
+paths:
+  # ========== 用户管理 ==========
+  /users:
+    get:
+      summary: 获取用户列表
+      tags: [Users]
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: 成功返回用户列表
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserListResponse'
+
+    post:
+      summary: 创建新用户
+      tags: [Users]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserRequest'
+      responses:
+        '201':
+          description: 用户创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+
+  /users/{userId}:
+    get:
+      summary: 获取用户详情
+      tags: [Users]
+      parameters:
+        - $ref: '#/components/parameters/UserIdParam'
+      responses:
+        '200':
+          description: 成功返回用户信息
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserDetailResponse'
+
+    patch:
+      summary: 更新用户信息
+      tags: [Users]
+      parameters:
+        - $ref: '#/components/parameters/UserIdParam'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRequest'
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+
+  /users/{userId}/credentials:
+    put:
+      summary: 更新用户认证信息（headers和cookies）
+      tags: [Users]
+      parameters:
+        - $ref: '#/components/parameters/UserIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCredentialsRequest'
+      responses:
+        '200':
+          description: 认证信息更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  # ========== 交易配置 ==========
+  /users/{userId}/config:
+    get:
+      summary: 获取用户交易配置
+      tags: [Configuration]
+      parameters:
+        - $ref: '#/components/parameters/UserIdParam'
+      responses:
+        '200':
+          description: 成功返回配置
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TradingConfigResponse'
+
+    put:
+      summary: 更新交易配置
+      tags: [Configuration]
+      parameters:
+        - $ref: '#/components/parameters/UserIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateConfigRequest'
+            example:
+              tokenSymbolShort: KOGE
+              targetVolume: "10000.0"
+              priceOffsetMode: percentage
+              buyOffsetValue: "0.5"
+              sellOffsetValue: "0.5"
+              orderQuantity: "100.0"
+              timeoutSeconds: 300
+              priceVolatilityThreshold: "2.0"
+      responses:
+        '200':
+          description: 配置更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TradingConfigResponse'
+
+  # ========== 交易控制 ==========
+  /users/{userId}/trading/start:
+    post:
+      summary: 启动自动交易
+      tags: [Trading]
+      parameters:
+        - $ref: '#/components/parameters/UserIdParam'
+      responses:
+        '200':
+          description: 交易已启动
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TradingStatusResponse'
+
+  /users/{userId}/trading/stop:
+    post:
+      summary: 停止自动交易
+      tags: [Trading]
+      parameters:
+        - $ref: '#/components/parameters/UserIdParam'
+      responses:
+        '200':
+          description: 交易已停止
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TradingStatusResponse'
+
+  /users/{userId}/trading/status:
+    get:
+      summary: 获取交易状态
+      tags: [Trading]
+      parameters:
+        - $ref: '#/components/parameters/UserIdParam'
+      responses:
+        '200':
+          description: 成功返回交易状态
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TradingStatusResponse'
+
+  # ========== 订单查询 ==========
+  /users/{userId}/orders:
+    get:
+      summary: 查询用户订单列表
+      tags: [Orders]
+      parameters:
+        - $ref: '#/components/parameters/UserIdParam'
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [ALL, PENDING, FILLED, CANCELLED]
+        - name: startTime
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: endTime
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: 成功返回订单列表
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderListResponse'
+
+  /users/{userId}/oto-orders/{otoOrderId}:
+    get:
+      summary: 获取OTO订单对详情
+      tags: [Orders]
+      parameters:
+        - $ref: '#/components/parameters/UserIdParam'
+        - name: otoOrderId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 成功返回订单详情
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OTOOrderDetailResponse'
+
+  /users/{userId}/oto-orders/{otoOrderId}/cancel:
+    post:
+      summary: 取消OTO订单对
+      tags: [Orders]
+      parameters:
+        - $ref: '#/components/parameters/UserIdParam'
+        - name: otoOrderId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 取消成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  # ========== 统计数据 ==========
+  /users/{userId}/statistics:
+    get:
+      summary: 获取用户交易统计
+      tags: [Statistics]
+      parameters:
+        - $ref: '#/components/parameters/UserIdParam'
+      responses:
+        '200':
+          description: 成功返回统计数据
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatisticsResponse'
+
+  /users/{userId}/balance:
+    get:
+      summary: 获取用户余额
+      tags: [Statistics]
+      parameters:
+        - $ref: '#/components/parameters/UserIdParam'
+      responses:
+        '200':
+          description: 成功返回余额信息
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BalanceResponse'
+
+  # ========== 代币管理 ==========
+  /tokens/mappings:
+    get:
+      summary: 获取代币符号映射列表
+      tags: [Configuration]
+      responses:
+        '200':
+          description: 成功返回映射列表
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenMappingListResponse'
+
+    post:
+      summary: 添加代币符号映射
+      tags: [Configuration]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTokenMappingRequest'
+      responses:
+        '201':
+          description: 映射创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenMappingResponse'
+
+components:
+  parameters:
+    UserIdParam:
+      name: userId
+      in: path
+      required: true
+      schema:
+        type: integer
+      description: 用户ID
+
+  schemas:
+    # ========== 用户相关 ==========
+    CreateUserRequest:
+      type: object
+      required:
+        - username
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 100
+        displayName:
+          type: string
+        email:
+          type: string
+          format: email
+
+    UpdateUserRequest:
+      type: object
+      properties:
+        displayName:
+          type: string
+        email:
+          type: string
+
+    UserResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        displayName:
+          type: string
+        email:
+          type: string
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    UserListResponse:
+      type: object
+      properties:
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+        users:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserResponse'
+
+    UserDetailResponse:
+      allOf:
+        - $ref: '#/components/schemas/UserResponse'
+        - type: object
+          properties:
+            hasCredentials:
+              type: boolean
+              description: 是否已配置认证信息
+            hasConfig:
+              type: boolean
+              description: 是否已配置交易参数
+            tradingStatus:
+              type: string
+              enum: [ACTIVE, PAUSED, STOPPED]
+
+    UpdateCredentialsRequest:
+      type: object
+      required:
+        - headers
+        - cookies
+      properties:
+        headers:
+          type: object
+          additionalProperties: true
+          description: HTTP headers（将被加密存储）
+        cookies:
+          type: string
+          description: Cookies字符串（将被加密存储）
+
+    # ========== 交易配置 ==========
+    UpdateConfigRequest:
+      type: object
+      properties:
+        tokenSymbolShort:
+          type: string
+          description: 代币简称（如KOGE）
+        targetVolume:
+          type: string
+          description: 目标交易量（USDT）
+        priceOffsetMode:
+          type: string
+          enum: [percentage, fixed]
+          description: 价格偏移模式
+        buyOffsetValue:
+          type: string
+          description: 买单偏移值
+        sellOffsetValue:
+          type: string
+          description: 卖单偏移值
+        orderQuantity:
+          type: string
+          description: 每次订单数量
+        timeoutSeconds:
+          type: integer
+          description: 订单超时时间（秒）
+        priceVolatilityThreshold:
+          type: string
+          description: 价格波动阈值（百分比）
+
+    TradingConfigResponse:
+      type: object
+      properties:
+        userId:
+          type: integer
+        tokenSymbolShort:
+          type: string
+        targetVolume:
+          type: string
+        currentVolume:
+          type: string
+        priceOffsetMode:
+          type: string
+        buyOffsetValue:
+          type: string
+        sellOffsetValue:
+          type: string
+        orderQuantity:
+          type: string
+        timeoutSeconds:
+          type: integer
+        priceVolatilityThreshold:
+          type: string
+        isTradingActive:
+          type: boolean
+        updatedAt:
+          type: string
+          format: date-time
+
+    # ========== 交易控制 ==========
+    TradingStatusResponse:
+      type: object
+      properties:
+        userId:
+          type: integer
+        isActive:
+          type: boolean
+        currentStatus:
+          type: string
+          enum: [IDLE, RUNNING, PAUSED_INSUFFICIENT_BALANCE, PAUSED_PRICE_VOLATILITY, PAUSED_WEBSOCKET_DISCONNECTED, PAUSED_AUTH_FAILED]
+        currentOTOOrderId:
+          type: integer
+          nullable: true
+        message:
+          type: string
+
+    # ========== 订单相关 ==========
+    OrderListResponse:
+      type: object
+      properties:
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+        orders:
+          type: array
+          items:
+            $ref: '#/components/schemas/OTOOrderSummary'
+
+    OTOOrderSummary:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        status:
+          type: string
+        targetPrice:
+          type: string
+        buyPrice:
+          type: string
+        sellPrice:
+          type: string
+        quantity:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        filledAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    OTOOrderDetailResponse:
+      allOf:
+        - $ref: '#/components/schemas/OTOOrderSummary'
+        - type: object
+          properties:
+            buyOrder:
+              $ref: '#/components/schemas/OrderDetail'
+            sellOrder:
+              $ref: '#/components/schemas/OrderDetail'
+
+    OrderDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+        exchangeOrderId:
+          type: string
+        side:
+          type: string
+          enum: [BUY, SELL]
+        price:
+          type: string
+        quantity:
+          type: string
+        filledQuantity:
+          type: string
+        status:
+          type: string
+        trades:
+          type: array
+          items:
+            $ref: '#/components/schemas/TradeRecord'
+
+    TradeRecord:
+      type: object
+      properties:
+        id:
+          type: integer
+        exchangeTradeId:
+          type: string
+        price:
+          type: string
+        quantity:
+          type: string
+        totalValue:
+          type: string
+        commission:
+          type: string
+        tradeTime:
+          type: string
+          format: date-time
+
+    # ========== 统计数据 ==========
+    StatisticsResponse:
+      type: object
+      properties:
+        userId:
+          type: integer
+        totalVolume:
+          type: string
+        todayVolume:
+          type: string
+        totalTradeCount:
+          type: integer
+        todayTradeCount:
+          type: integer
+        targetVolume:
+          type: string
+        completionPercentage:
+          type: string
+        lastTradeAt:
+          type: string
+          format: date-time
+
+    BalanceResponse:
+      type: object
+      properties:
+        userId:
+          type: integer
+        balances:
+          type: array
+          items:
+            type: object
+            properties:
+              asset:
+                type: string
+              free:
+                type: string
+              locked:
+                type: string
+
+    # ========== 代币映射 ==========
+    CreateTokenMappingRequest:
+      type: object
+      required:
+        - symbolShort
+        - orderApiSymbol
+        - websocketSymbol
+      properties:
+        symbolShort:
+          type: string
+        tokenName:
+          type: string
+        orderApiSymbol:
+          type: string
+        websocketSymbol:
+          type: string
+        alphaId:
+          type: string
+
+    TokenMappingResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        symbolShort:
+          type: string
+        tokenName:
+          type: string
+        orderApiSymbol:
+          type: string
+        websocketSymbol:
+          type: string
+        alphaId:
+          type: string
+
+    TokenMappingListResponse:
+      type: object
+      properties:
+        total:
+          type: integer
+        mappings:
+          type: array
+          items:
+            $ref: '#/components/schemas/TokenMappingResponse'
+
+    # ========== 通用响应 ==========
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+
