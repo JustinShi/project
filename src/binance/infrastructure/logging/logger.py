@@ -2,20 +2,21 @@
 
 import logging
 import sys
-from pathlib import Path
-from typing import Any, Dict
 from datetime import datetime
+from pathlib import Path
+from typing import Any
 
 import structlog
 
 from binance.config import get_settings
 
+
 _LOGGER_CONFIGURED = False
 
 
-def _format_console_output(logger: Any, name: str, event_dict: Dict) -> str:
+def _format_console_output(logger: Any, name: str, event_dict: dict) -> str:
     """自定义控制台日志格式化器
-    
+
     格式: [时间] [级别] [模块] 消息 | 字段1=值1 字段2=值2
     """
     # 提取关键字段
@@ -23,21 +24,24 @@ def _format_console_output(logger: Any, name: str, event_dict: Dict) -> str:
     level = event_dict.pop("level", "info").upper()
     module = event_dict.pop("module", "unknown")
     event = event_dict.pop("event", "")
-    
+
     # 简化模块名（只保留最后两级）
     module_parts = module.split(".")
-    if len(module_parts) > 2:
-        short_module = ".".join(module_parts[-2:])
-    else:
-        short_module = module
-    
+    short_module = ".".join(module_parts[-2:]) if len(module_parts) > 2 else module
+
     # 格式化时间（只保留时分秒）
     try:
-        dt = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
-        time_str = dt.strftime("%H:%M:%S")
-    except:
-        time_str = timestamp[:8] if len(timestamp) >= 8 else timestamp
-    
+        # 如果 timestamp 已经是 datetime 对象，直接使用
+        if isinstance(timestamp, datetime):
+            time_str = timestamp.strftime("%H:%M:%S")
+        elif isinstance(timestamp, str):
+            dt = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+            time_str = dt.strftime("%H:%M:%S")
+        else:
+            time_str = str(timestamp)[:8]
+    except Exception:
+        time_str = str(timestamp)[:8] if timestamp else "00:00:00"
+
     # 级别颜色
     level_colors = {
         "DEBUG": "\033[36m",    # 青色
@@ -48,15 +52,15 @@ def _format_console_output(logger: Any, name: str, event_dict: Dict) -> str:
     }
     reset = "\033[0m"
     level_color = level_colors.get(level, "")
-    
+
     # 构建基础消息
     base_msg = f"[{time_str}] {level_color}[{level:7}]{reset} [{short_module:30}] {event}"
-    
+
     # 添加额外字段
     if event_dict:
         extra_fields = " | ".join(f"{k}={v}" for k, v in event_dict.items())
         return f"{base_msg} | {extra_fields}"
-    
+
     return base_msg
 
 
@@ -83,7 +87,7 @@ def setup_logging() -> None:
     file_handler = logging.FileHandler(settings.log_file)
     file_handler.setLevel(getattr(logging, settings.log_level.upper()))
     logging.root.addHandler(file_handler)
-    
+
     # 禁用 httpx 和 httpcore 的详细日志
     logging.getLogger("httpx").setLevel(logging.WARNING)
     logging.getLogger("httpcore").setLevel(logging.WARNING)

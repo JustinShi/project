@@ -1,8 +1,7 @@
 """SQLAlchemy ORM 模型定义"""
 
-from datetime import datetime, timedelta
+from datetime import datetime
 from decimal import Decimal
-from typing import List, Optional
 
 from sqlalchemy import (
     Boolean,
@@ -14,12 +13,11 @@ from sqlalchemy import (
     Numeric,
     String,
     Text,
-    UniqueConstraint,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
-from binance.config.constants import OTOOrderPairStatus, PriceOffsetMode
+from binance.config.constants import OTOOrderPairStatus
 
 
 class Base(DeclarativeBase):
@@ -35,23 +33,15 @@ class User(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
-    email: Mapped[Optional[str]] = mapped_column(String(255))
-    
+    email: Mapped[str | None] = mapped_column(String(255))
+
     # 认证信息（明文存储）
-    headers: Mapped[Optional[str]] = mapped_column(Text)
-    cookies: Mapped[Optional[str]] = mapped_column(Text)
-    last_verified_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    headers: Mapped[str | None] = mapped_column(Text)
+    cookies: Mapped[str | None] = mapped_column(Text)
     is_valid: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-    
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now()
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
-    )
 
     # 关系
-    oto_order_pairs: Mapped[List["OTOOrderPair"]] = relationship(
+    oto_order_pairs: Mapped[list["OTOOrderPair"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )
 
@@ -72,8 +62,8 @@ class OTOOrderPair(Base):
     )
 
     # 币安订单ID（直接存储字符串）
-    buy_order_id: Mapped[Optional[str]] = mapped_column(String(100))
-    sell_order_id: Mapped[Optional[str]] = mapped_column(String(100))
+    buy_order_id: Mapped[str | None] = mapped_column(String(100))
+    sell_order_id: Mapped[str | None] = mapped_column(String(100))
 
     # 订单对状态
     status: Mapped[str] = mapped_column(String(20), nullable=False)
@@ -91,7 +81,7 @@ class OTOOrderPair(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
-    completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     # 关系
     user: Mapped["User"] = relationship(back_populates="oto_order_pairs")

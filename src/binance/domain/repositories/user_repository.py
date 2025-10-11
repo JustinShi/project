@@ -1,7 +1,6 @@
 """用户仓储接口"""
 
 from abc import ABC, abstractmethod
-from typing import Optional
 
 from binance.domain.entities import User
 
@@ -10,7 +9,7 @@ class UserRepository(ABC):
     """用户仓储接口"""
 
     @abstractmethod
-    async def get_by_id(self, user_id: int) -> Optional[User]:
+    async def get_by_id(self, user_id: int) -> User | None:
         """根据ID获取用户
 
         Args:
@@ -22,7 +21,7 @@ class UserRepository(ABC):
         pass
 
     @abstractmethod
-    async def get_by_name(self, name: str) -> Optional[User]:
+    async def get_by_name(self, name: str) -> User | None:
         """根据用户名获取用户
 
         Args:

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, Optional
 
 from binance.infrastructure.cache import LocalCache
 
@@ -13,7 +12,7 @@ class SymbolMapping:
     """标准化后的代币符号映射信息"""
 
     short_symbol: str
-    chain: Optional[str]
+    chain: str | None
     alpha_id: str
     order_api_symbol: str
     websocket_symbol: str
@@ -21,18 +20,18 @@ class SymbolMapping:
     quote_asset: str
     price_precision: int
     quantity_precision: int
-    lot_size: Optional[Dict[str, str]]
-    price_filter: Optional[Dict[str, str]]
+    lot_size: dict[str, str] | None
+    price_filter: dict[str, str] | None
 
 
 class SymbolMapper:
     """从本地缓存构建代币符号映射"""
 
-    def __init__(self, cache: Optional[LocalCache] = None) -> None:
+    def __init__(self, cache: LocalCache | None = None) -> None:
         self._cache = cache or LocalCache()
-        self._memory: Dict[str, SymbolMapping] = {}
+        self._memory: dict[str, SymbolMapping] = {}
 
-    def get_mapping(self, short_symbol: str, chain: Optional[str] = None) -> SymbolMapping:
+    def get_mapping(self, short_symbol: str, chain: str | None = None) -> SymbolMapping:
         """根据代币简称获取完整的符号映射"""
 
         short_symbol_upper = short_symbol.upper()
@@ -55,8 +54,8 @@ class SymbolMapper:
         precision_entry = self._cache.get_token_precision(order_symbol)
         precision_data = precision_entry or {}
 
-        lot_size: Optional[Dict[str, str]] = None
-        price_filter: Optional[Dict[str, str]] = None
+        lot_size: dict[str, str] | None = None
+        price_filter: dict[str, str] | None = None
         filters = precision_data.get("filters") or []
         for entry in filters:
             if entry.get("filterType") == "LOT_SIZE":

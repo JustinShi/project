@@ -2,11 +2,13 @@
 
 import asyncio
 import json
-from typing import Callable, Optional, Dict, Any
-from datetime import datetime
+from collections.abc import Callable
+
 import websockets
 from websockets.exceptions import ConnectionClosed, WebSocketException
+
 from binance.infrastructure.logging.logger import get_logger
+
 
 logger = get_logger(__name__)
 
@@ -21,7 +23,7 @@ class BinanceWebSocketClient:
         max_reconnect_attempts: int = 10,
     ):
         """初始化WebSocket客户端
-        
+
         Args:
             base_url: WebSocket基础URL
             reconnect_interval: 重连间隔（秒）
@@ -30,31 +32,31 @@ class BinanceWebSocketClient:
         self._base_url = base_url
         self._reconnect_interval = reconnect_interval
         self._max_reconnect_attempts = max_reconnect_attempts
-        self._websocket: Optional[websockets.WebSocketServerProtocol] = None
+        self._websocket: websockets.WebSocketServerProtocol | None = None
         self._is_connected = False
         self._reconnect_attempts = 0
-        self._message_handlers: Dict[str, Callable] = {}
-        self._connection_handlers: Dict[str, Callable] = {}
+        self._message_handlers: dict[str, Callable] = {}
+        self._connection_handlers: dict[str, Callable] = {}
 
     async def connect(self, stream_name: str) -> None:
         """连接到WebSocket流
-        
+
         Args:
             stream_name: 流名称
         """
         url = f"{self._base_url}/{stream_name}"
-        
+
         try:
             logger.info(f"连接到WebSocket流: {url}")
             self._websocket = await websockets.connect(url)
             self._is_connected = True
             self._reconnect_attempts = 0
-            
+
             # 触发连接成功事件
             await self._trigger_connection_event("connected")
-            
+
             logger.info("WebSocket连接成功")
-            
+
         except Exception as e:
             logger.error(f"WebSocket连接失败: {e}")
             await self._trigger_connection_event("connection_failed", error=str(e))
@@ -65,7 +67,7 @@ class BinanceWebSocketClient:
         if self._websocket and not self._websocket.closed:
             await self._websocket.close()
             logger.info("WebSocket连接已断开")
-        
+
         self._is_connected = False
         await self._trigger_connection_event("disconnected")
 
@@ -73,51 +75,51 @@ class BinanceWebSocketClient:
         """监听WebSocket消息"""
         if not self._websocket:
             raise RuntimeError("WebSocket未连接")
-        
+
         try:
             async for message in self._websocket:
                 await self._handle_message(message)
-                
+
         except ConnectionClosed:
             logger.warning("WebSocket连接已关闭")
             self._is_connected = False
             await self._trigger_connection_event("connection_closed")
-            
+
         except WebSocketException as e:
             logger.error(f"WebSocket异常: {e}")
             await self._trigger_connection_event("websocket_error", error=str(e))
-            
+
         except Exception as e:
             logger.error(f"监听消息时发生错误: {e}")
             await self._trigger_connection_event("message_error", error=str(e))
 
     async def _handle_message(self, message: str) -> None:
         """处理接收到的消息
-        
+
         Args:
             message: 原始消息字符串
         """
         try:
             data = json.loads(message)
-            
+
             # 根据消息类型调用相应的处理器
             message_type = data.get("e", "unknown")
             handler = self._message_handlers.get(message_type)
-            
+
             if handler:
                 await handler(data)
             else:
                 logger.debug(f"未处理的消息类型: {message_type}")
-                
+
         except json.JSONDecodeError as e:
             logger.error(f"解析消息失败: {e}, 消息: {message}")
-            
+
         except Exception as e:
             logger.error(f"处理消息时发生错误: {e}")
 
     def register_message_handler(self, message_type: str, handler: Callable) -> None:
         """注册消息处理器
-        
+
         Args:
             message_type: 消息类型
             handler: 处理函数
@@ -127,7 +129,7 @@ class BinanceWebSocketClient:
 
     def register_connection_handler(self, event_type: str, handler: Callable) -> None:
         """注册连接事件处理器
-        
+
         Args:
             event_type: 事件类型
             handler: 处理函数
@@ -137,7 +139,7 @@ class BinanceWebSocketClient:
 
     async def _trigger_connection_event(self, event_type: str, **kwargs) -> None:
         """触发连接事件
-        
+
         Args:
             event_type: 事件类型
             **kwargs: 额外参数
@@ -151,26 +153,26 @@ class BinanceWebSocketClient:
 
     async def reconnect(self) -> bool:
         """尝试重连
-        
+
         Returns:
             是否重连成功
         """
         if self._reconnect_attempts >= self._max_reconnect_attempts:
             logger.error(f"达到最大重连次数: {self._max_reconnect_attempts}")
             return False
-        
+
         self._reconnect_attempts += 1
         wait_time = min(self._reconnect_interval * (2 ** (self._reconnect_attempts - 1)), 60)
-        
+
         logger.info(f"等待 {wait_time} 秒后重连 (尝试 {self._reconnect_attempts}/{self._max_reconnect_attempts})")
         await asyncio.sleep(wait_time)
-        
+
         try:
             # 这里需要重新连接，但需要知道原来的流名称
             # 在实际使用中，应该保存流名称
             logger.info("尝试重连...")
             return True
-            
+
         except Exception as e:
             logger.error(f"重连失败: {e}")
             return False

@@ -1,7 +1,6 @@
 """用户相关的Pydantic schemas"""
 
 from datetime import datetime
-from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -11,9 +10,9 @@ class UserResponse(BaseModel):
 
     id: int
     name: str
-    email: Optional[str] = None
+    email: str | None = None
     is_valid: bool
-    created_at: Optional[datetime] = None
+    created_at: datetime | None = None
 
     class Config:
         from_attributes = True
@@ -35,7 +34,7 @@ class BalanceResponse(BaseModel):
     """余额查询响应"""
 
     total_valuation: str = Field(..., description="总估值（USDT）")
-    balances: List[TokenBalance] = Field(default_factory=list, description="余额列表")
+    balances: list[TokenBalance] = Field(default_factory=list, description="余额列表")
 
 
 class TokenVolume(BaseModel):
@@ -49,7 +48,7 @@ class VolumeResponse(BaseModel):
     """交易量查询响应"""
 
     total_volume: float = Field(..., description="总交易量（USDT）")
-    volumes_by_token: List[TokenVolume] = Field(
+    volumes_by_token: list[TokenVolume] = Field(
         default_factory=list, description="各代币交易量"
     )
 

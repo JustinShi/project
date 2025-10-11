@@ -9,6 +9,7 @@ global_settings:
   default_sell_profit_percentage: 10          # 默认卖出折扣 1.0%（低于买价）
   default_trade_interval_seconds: 1            # 默认交易间隔 1 秒
   default_single_trade_amount_usdt: 200         # 默认单次交易金额 30 USDT
+  default_volume_check_delay_seconds: 60       # 默认批次完成后等待时间（秒），让交易量数据更新
   
   # 风控参数
   max_concurrent_users: 10                     # 最大并发用户数
@@ -38,10 +39,11 @@ strategies:
     enabled: true
     target_token: AOP
     target_chain: BSC
-    target_volume: 4000
+    target_volume: 5500                         # 测试等待逻辑
+    volume_check_delay_seconds: 10              # 测试用：批次完成后等待10秒
     #single_trade_amount_usdt: 10               # 覆盖全局默认值
     #trade_interval_seconds: 2                  # 覆盖全局默认值
-    user_ids: [1]
+    user_ids: [2]  # 只用户2测试
 
 
 # ============================================================================

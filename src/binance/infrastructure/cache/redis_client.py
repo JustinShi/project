@@ -1,13 +1,13 @@
 """Redis客户端管理"""
 
 from functools import lru_cache
-from typing import Optional
 
 from redis.asyncio import Redis
 
 from binance.config import get_settings
 
-_redis_client: Optional[Redis] = None
+
+_redis_client: Redis | None = None
 
 
 async def init_redis() -> Redis:

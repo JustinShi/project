@@ -1,9 +1,8 @@
 """应用配置管理"""
 
 from functools import lru_cache
-from typing import List
 
-from pydantic import Field, PostgresDsn, RedisDsn
+from pydantic import Field, RedisDsn
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -78,7 +77,7 @@ class Settings(BaseSettings):
     testing: bool = Field(default=False, description="测试模式")
 
     # CORS配置
-    cors_origins: List[str] = Field(
+    cors_origins: list[str] = Field(
         default=["http://localhost:3000"], description="允许的CORS来源"
     )
     cors_allow_credentials: bool = Field(default=True, description="允许携带凭证")

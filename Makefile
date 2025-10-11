@@ -1,4 +1,4 @@
-.PHONY: help install format check lint test clean clean-all pre-commit-install pre-commit-run
+.PHONY: help install format check lint test clean clean-all pre-commit-install pre-commit-run run-strategy update-credentials
 
 help:  ## 显示帮助信息
 	@echo "可用的命令:"
@@ -22,6 +22,10 @@ help:  ## 显示帮助信息
 	@echo "lint             - 运行代码质量检查 (使用 Ruff)"
 	@echo "test             - 运行测试"
 	@echo "quality          - 运行完整的代码质量检查流程"
+	@echo ""
+	@echo "📈 交易脚本:"
+	@echo "run-strategy     - 运行交易策略 (需要指定 STRATEGY=策略名)"
+	@echo "update-credentials - 更新用户凭证"
 	@echo ""
 	@echo "🧹 清理命令:"
 	@echo "clean            - 清理临时文件"
@@ -124,3 +128,23 @@ pre-commit-install:  ## 安装 pre-commit hooks
 
 pre-commit-run:  ## 运行 pre-commit 检查
 	uv run pre-commit run --all-files
+
+# ==================== 交易脚本 ====================
+
+run-strategy:  ## 运行交易策略 (使用: make run-strategy STRATEGY=策略名)
+ifndef STRATEGY
+	@echo "❌ 错误: 请指定策略名称"
+	@echo "用法: make run-strategy STRATEGY=aop_test"
+	@echo ""
+	@echo "示例:"
+	@echo "  make run-strategy STRATEGY=aop_test"
+	@exit 1
+endif
+	@echo "🚀 启动交易策略: $(STRATEGY)"
+	@echo ""
+	@set LOG_FORMAT=console && uv run python scripts/run_trading_strategy.py --strategy $(STRATEGY)
+
+update-credentials:  ## 更新用户凭证
+	@echo "🔐 启动用户凭证更新工具"
+	@echo ""
+	uv run python scripts/update_user_credentials_quick.py

@@ -1,24 +1,23 @@
 """价格API路由"""
 
-from typing import List, Optional
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, status, Query
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from binance.api.dependencies import get_db_session, get_user_repository
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+
+from binance.api.dependencies import get_user_repository
 from binance.api.schemas.price_schema import (
+    MonitoringStatusResponse,
     PriceDataResponse,
     PriceHistoryResponse,
     PriceStatisticsResponse,
-    VolatilityAlertResponse,
     WebSocketStatusResponse,
-    MonitoringStatusResponse,
 )
-from binance.application.services.price_monitor_service import PriceMonitorService
 from binance.application.services.notification_service import NotificationService
+from binance.application.services.price_monitor_service import PriceMonitorService
 from binance.domain.repositories import UserRepository
 from binance.infrastructure.cache.cache_manager import CacheManager
 from binance.infrastructure.cache.redis_client import get_redis_client
+
 
 router = APIRouter(prefix="/prices", tags=["价格监控"])
 
@@ -35,7 +34,7 @@ async def get_price_monitor_service(
 ) -> PriceMonitorService:
     """获取价格监控服务依赖"""
     notification_service = NotificationService(user_repo)
-    
+
     return PriceMonitorService(
         cache_manager=cache_manager,
         on_volatility_alert=notification_service.notify_volatility_alert,
@@ -55,7 +54,7 @@ async def get_latest_price(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"代币 {symbol} 没有价格数据"
             )
-        
+
         return PriceDataResponse(
             symbol=symbol,
             price=latest_price["price"],
@@ -65,7 +64,7 @@ async def get_latest_price(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"获取价格失败: {str(e)}"
+            detail=f"获取价格失败: {e!s}"
         )
 
 
@@ -78,7 +77,7 @@ async def get_price_history(
     """获取价格历史"""
     try:
         history = await price_service.get_price_statistics(symbol, minutes)
-        
+
         price_data = []
         for item in history:
             price_data.append(PriceDataResponse(
@@ -87,7 +86,7 @@ async def get_price_history(
                 volume=item.get("volume", 0),
                 timestamp=datetime.fromisoformat(item["timestamp"]),
             ))
-        
+
         return PriceHistoryResponse(
             symbol=symbol,
             prices=price_data,
@@ -97,7 +96,7 @@ async def get_price_history(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"获取价格历史失败: {str(e)}"
+            detail=f"获取价格历史失败: {e!s}"
         )
 
 
@@ -111,33 +110,33 @@ async def get_price_statistics(
     try:
         # 获取价格历史
         history = await cache_manager.get_price_history(symbol, minutes * 60)
-        
+
         if not history:
             return PriceStatisticsResponse(
                 symbol=symbol,
                 count=0,
                 time_range_minutes=minutes,
             )
-        
+
         # 计算统计信息
         prices = [float(item["price"]) for item in history if item.get("price")]
-        
+
         if not prices:
             return PriceStatisticsResponse(
                 symbol=symbol,
                 count=0,
                 time_range_minutes=minutes,
             )
-        
+
         min_price = min(prices)
         max_price = max(prices)
         avg_price = sum(prices) / len(prices)
-        
+
         # 计算波动率
         volatility = None
         if min_price > 0:
             volatility = ((max_price - min_price) / min_price) * 100
-        
+
         return PriceStatisticsResponse(
             symbol=symbol,
             count=len(prices),
@@ -150,25 +149,25 @@ async def get_price_statistics(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"获取价格统计失败: {str(e)}"
+            detail=f"获取价格统计失败: {e!s}"
         )
 
 
 @router.post("/monitoring/start")
 async def start_price_monitoring(
-    symbols: List[str],
+    symbols: list[str],
     volatility_threshold: float = 2.0,
     price_service: PriceMonitorService = Depends(get_price_monitor_service),
 ):
     """启动价格监控"""
     try:
         from decimal import Decimal
-        
+
         await price_service.start_monitoring(
             symbols=symbols,
             volatility_threshold=Decimal(str(volatility_threshold))
         )
-        
+
         return {
             "message": "价格监控已启动",
             "symbols": symbols,
@@ -177,7 +176,7 @@ async def start_price_monitoring(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"启动价格监控失败: {str(e)}"
+            detail=f"启动价格监控失败: {e!s}"
         )
 
 
@@ -188,14 +187,14 @@ async def stop_price_monitoring(
     """停止价格监控"""
     try:
         await price_service.stop_monitoring()
-        
+
         return {
             "message": "价格监控已停止",
         }
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"停止价格监控失败: {str(e)}"
+            detail=f"停止价格监控失败: {e!s}"
         )
 
 
@@ -206,7 +205,7 @@ async def get_monitoring_status(
     """获取监控状态"""
     try:
         monitored_symbols = await price_service.get_monitored_symbols()
-        
+
         return MonitoringStatusResponse(
             is_running=price_service.is_running,
             monitored_symbols=monitored_symbols,
@@ -216,7 +215,7 @@ async def get_monitoring_status(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"获取监控状态失败: {str(e)}"
+            detail=f"获取监控状态失败: {e!s}"
         )
 
 
@@ -228,7 +227,7 @@ async def get_websocket_status(
     """获取WebSocket连接状态"""
     try:
         is_monitored = await price_service.is_symbol_monitored(symbol)
-        
+
         return WebSocketStatusResponse(
             symbol=symbol,
             is_connected=is_monitored and price_service.is_running,
@@ -239,5 +238,5 @@ async def get_websocket_status(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"获取WebSocket状态失败: {str(e)}"
+            detail=f"获取WebSocket状态失败: {e!s}"
         )

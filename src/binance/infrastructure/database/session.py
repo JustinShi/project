@@ -1,6 +1,6 @@
 """数据库会话管理"""
 
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
 
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import (
 )
 
 from binance.config import get_settings
+
 
 # 全局引擎和会话工厂
 _engine = None

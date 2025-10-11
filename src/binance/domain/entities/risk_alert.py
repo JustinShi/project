@@ -3,10 +3,10 @@
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
-from typing import Optional, Dict, Any
 from enum import Enum
+from typing import Any
 
-from binance.domain.entities.risk_profile import RiskLevel, RiskFactor
+from binance.domain.entities.risk_profile import RiskFactor, RiskLevel
 
 
 class AlertSeverity(str, Enum):
@@ -28,10 +28,10 @@ class AlertStatus(str, Enum):
 @dataclass
 class RiskAlert:
     """风险警报"""
-    
+
     id: int
     user_id: int
-    
+
     # 警报基本信息
     title: str
     message: str
@@ -39,51 +39,51 @@ class RiskAlert:
     risk_factor: RiskFactor
     risk_level: RiskLevel
     triggered_at: datetime
-    
+
     # 可选字段
     status: AlertStatus = AlertStatus.ACTIVE
-    current_value: Optional[Decimal] = None
-    threshold_value: Optional[Decimal] = None
-    data: Optional[Dict[str, Any]] = None
-    acknowledged_at: Optional[datetime] = None
-    resolved_at: Optional[datetime] = None
-    created_at: Optional[datetime] = None
-    updated_at: Optional[datetime] = None
-    
+    current_value: Decimal | None = None
+    threshold_value: Decimal | None = None
+    data: dict[str, Any] | None = None
+    acknowledged_at: datetime | None = None
+    resolved_at: datetime | None = None
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+
     def acknowledge(self) -> None:
         """确认警报"""
         self.status = AlertStatus.ACKNOWLEDGED
         self.acknowledged_at = datetime.now()
         self.updated_at = datetime.now()
-    
+
     def resolve(self) -> None:
         """解决警报"""
         self.status = AlertStatus.RESOLVED
         self.resolved_at = datetime.now()
         self.updated_at = datetime.now()
-    
+
     def dismiss(self) -> None:
         """忽略警报"""
         self.status = AlertStatus.DISMISSED
         self.updated_at = datetime.now()
-    
+
     def is_active(self) -> bool:
         """检查警报是否活跃"""
         return self.status == AlertStatus.ACTIVE
-    
+
     def is_critical(self) -> bool:
         """检查是否为严重警报"""
         return self.severity == AlertSeverity.CRITICAL
-    
-    def get_duration(self) -> Optional[int]:
+
+    def get_duration(self) -> int | None:
         """获取警报持续时间（秒）"""
         if self.status == AlertStatus.RESOLVED and self.resolved_at:
             return int((self.resolved_at - self.triggered_at).total_seconds())
         elif self.status in [AlertStatus.ACTIVE, AlertStatus.ACKNOWLEDGED]:
             return int((datetime.now() - self.triggered_at).total_seconds())
         return None
-    
-    def to_dict(self) -> Dict[str, Any]:
+
+    def to_dict(self) -> dict[str, Any]:
         """转换为字典"""
         return {
             "id": self.id,

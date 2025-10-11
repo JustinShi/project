@@ -1,12 +1,13 @@
 """余额查询服务"""
 
 import json
-from typing import Dict, List, Any
+from typing import Any
 
 from binance.domain.repositories import UserRepository
 from binance.infrastructure.binance_client import BinanceClient
 from binance.infrastructure.encryption import get_crypto_service
 from binance.infrastructure.logging import get_logger
+
 
 logger = get_logger(__name__)
 
@@ -23,7 +24,7 @@ class BalanceService:
         self._user_repo = user_repository
         self._crypto = get_crypto_service()
 
-    async def get_user_balance(self, user_id: int) -> Dict[str, Any]:
+    async def get_user_balance(self, user_id: int) -> dict[str, Any]:
         """获取用户余额
 
         Args:
@@ -78,17 +79,17 @@ class BalanceService:
         async with BinanceClient(headers=headers, cookies=cookies) as client:
             try:
                 balance_data = await client.get_wallet_balance()
-                
+
                 # 5. 标记凭证已验证
                 user.mark_credentials_verified()
                 await self._user_repo.update(user)
-                
+
                 logger.info(
                     "balance_retrieved",
                     user_id=user_id,
                     total_valuation=balance_data.get("totalValuation"),
                 )
-                
+
                 return {
                     "total_valuation": balance_data.get("totalValuation", "0"),
                     "balances": balance_data.get("list", []),
@@ -103,7 +104,7 @@ class BalanceService:
                     )
                 raise
 
-    async def get_user_volume(self, user_id: int) -> Dict[str, Any]:
+    async def get_user_volume(self, user_id: int) -> dict[str, Any]:
         """获取用户今日交易量
 
         Args:
@@ -148,13 +149,13 @@ class BalanceService:
         async with BinanceClient(headers=headers, cookies=cookies) as client:
             try:
                 volume_data = await client.get_user_volume()
-                
+
                 logger.info(
                     "volume_retrieved",
                     user_id=user_id,
                     total_volume=volume_data.get("totalVolume"),
                 )
-                
+
                 return {
                     "total_volume": volume_data.get("totalVolume", 0),
                     "volumes_by_token": volume_data.get("tradeVolumeInfoList", []),

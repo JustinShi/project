@@ -10,12 +10,18 @@ from binance.infrastructure.cache import init_redis
 from binance.infrastructure.database import init_db
 from binance.infrastructure.logging import get_logger, setup_logging
 
-# 导入路由
-from .routers import users, prices, orders, notifications, risk, monitoring, health
+from .application.services.security_service import SecurityConfig, SecurityService
 
 # 导入中间件
-from .middleware.security_middleware import SecurityMiddleware, RateLimitMiddleware, AuditMiddleware
-from .application.services.security_service import SecurityService, SecurityConfig
+from .middleware.security_middleware import (
+    AuditMiddleware,
+    RateLimitMiddleware,
+    SecurityMiddleware,
+)
+
+# 导入路由
+from .routers import health, monitoring, notifications, orders, prices, risk, users
+
 
 # 设置日志
 setup_logging()
@@ -27,17 +33,17 @@ async def lifespan(app: FastAPI):
     """应用生命周期管理"""
     # 启动时
     logger.info("application_starting")
-    
+
     # 初始化数据库
     init_db()
     logger.info("database_initialized")
-    
+
     # 初始化Redis
     await init_redis()
     logger.info("redis_initialized")
-    
+
     yield
-    
+
     # 关闭时
     logger.info("application_shutting_down")
 

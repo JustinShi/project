@@ -1,39 +1,37 @@
 """风险管理API路由"""
 
-from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime
 from decimal import Decimal
 
-from binance.api.dependencies import get_db_session, get_user_repository
+from fastapi import APIRouter, Depends, HTTPException
+
 from binance.api.schemas.risk_schema import (
-    RiskProfileResponse,
-    RiskProfileCreateRequest,
-    RiskProfileUpdateRequest,
-    RiskAlertResponse,
-    RiskAlertListResponse,
     RiskAlertActionRequest,
     RiskAlertActionResponse,
+    RiskAlertListResponse,
+    RiskAlertResponse,
     RiskAssessmentRequest,
     RiskAssessmentResponse,
     RiskMetricsResponse,
+    RiskProfileCreateRequest,
+    RiskProfileResponse,
+    RiskProfileUpdateRequest,
+    RiskReportResponse,
     RiskSummaryResponse,
-    RiskReportResponse
 )
-from binance.domain.services.risk_manager import RiskManager, RiskMetrics
-from binance.domain.entities.risk_profile import RiskProfile, RiskLevel
-from binance.domain.entities.risk_alert import AlertSeverity, AlertStatus
 from binance.domain.entities.price_data import PriceData
+from binance.domain.entities.risk_profile import RiskLevel
+from binance.domain.services.risk_manager import RiskManager
 from binance.domain.value_objects.price import Price
 from binance.infrastructure.logging.logger import get_logger
+
 
 logger = get_logger(__name__)
 
 router = APIRouter(prefix="/risk", tags=["risk"])
 
 # 全局风险管理服务实例
-_risk_manager: Optional[RiskManager] = None
+_risk_manager: RiskManager | None = None
 
 
 def get_risk_manager() -> RiskManager:
@@ -54,7 +52,7 @@ async def get_risk_profile(
         profile = risk_manager.get_risk_profile(user_id)
         if not profile:
             raise HTTPException(status_code=404, detail="风险配置不存在")
-        
+
         return RiskProfileResponse(
             id=profile.id,
             user_id=profile.user_id,
@@ -76,12 +74,12 @@ async def get_risk_profile(
             created_at=profile.created_at,
             updated_at=profile.updated_at
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"获取风险配置异常: {e}")
-        raise HTTPException(status_code=500, detail=f"获取风险配置失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"获取风险配置失败: {e!s}")
 
 
 @router.post("/profile/{user_id}", response_model=RiskProfileResponse)
@@ -95,7 +93,7 @@ async def create_risk_profile(
         # 创建风险配置
         risk_level = RiskLevel(request.risk_level)
         profile = risk_manager.create_risk_profile(user_id, risk_level)
-        
+
         # 应用自定义设置
         if request.max_price_volatility is not None:
             profile.max_price_volatility = request.max_price_volatility
@@ -123,15 +121,15 @@ async def create_risk_profile(
             profile.max_consecutive_losses = request.max_consecutive_losses
         if request.max_daily_loss is not None:
             profile.max_daily_loss = request.max_daily_loss
-        
+
         # 验证配置
         is_valid, validation_message = profile.validate()
         if not is_valid:
             raise HTTPException(status_code=400, detail=validation_message)
-        
+
         # 设置配置
         risk_manager.set_risk_profile(profile)
-        
+
         return RiskProfileResponse(
             id=profile.id,
             user_id=profile.user_id,
@@ -153,12 +151,12 @@ async def create_risk_profile(
             created_at=profile.created_at,
             updated_at=profile.updated_at
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"创建风险配置异常: {e}")
-        raise HTTPException(status_code=500, detail=f"创建风险配置失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"创建风险配置失败: {e!s}")
 
 
 @router.put("/profile/{user_id}", response_model=RiskProfileResponse)
@@ -172,7 +170,7 @@ async def update_risk_profile(
         profile = risk_manager.get_risk_profile(user_id)
         if not profile:
             raise HTTPException(status_code=404, detail="风险配置不存在")
-        
+
         # 更新配置
         if request.risk_level is not None:
             profile.risk_level = RiskLevel(request.risk_level)
@@ -204,15 +202,15 @@ async def update_risk_profile(
             profile.max_daily_loss = request.max_daily_loss
         if request.is_active is not None:
             profile.is_active = request.is_active
-        
+
         # 验证配置
         is_valid, validation_message = profile.validate()
         if not is_valid:
             raise HTTPException(status_code=400, detail=validation_message)
-        
+
         # 更新配置
         risk_manager.set_risk_profile(profile)
-        
+
         return RiskProfileResponse(
             id=profile.id,
             user_id=profile.user_id,
@@ -234,12 +232,12 @@ async def update_risk_profile(
             created_at=profile.created_at,
             updated_at=profile.updated_at
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"更新风险配置异常: {e}")
-        raise HTTPException(status_code=500, detail=f"更新风险配置失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"更新风险配置失败: {e!s}")
 
 
 @router.get("/alerts/{user_id}", response_model=RiskAlertListResponse)
@@ -250,7 +248,7 @@ async def get_risk_alerts(
     """获取用户风险警报"""
     try:
         alerts = risk_manager.get_active_alerts(user_id)
-        
+
         alert_responses = []
         for alert in alerts:
             alert_responses.append(RiskAlertResponse(
@@ -270,20 +268,20 @@ async def get_risk_alerts(
                 resolved_at=alert.resolved_at,
                 duration_seconds=alert.get_duration()
             ))
-        
+
         active_count = len([a for a in alerts if a.is_active()])
         critical_count = len([a for a in alerts if a.is_critical()])
-        
+
         return RiskAlertListResponse(
             alerts=alert_responses,
             total=len(alerts),
             active_count=active_count,
             critical_count=critical_count
         )
-        
+
     except Exception as e:
         logger.error(f"获取风险警报异常: {e}")
-        raise HTTPException(status_code=500, detail=f"获取风险警报失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"获取风险警报失败: {e!s}")
 
 
 @router.post("/alerts/{user_id}/acknowledge", response_model=RiskAlertActionResponse)
@@ -295,7 +293,7 @@ async def acknowledge_risk_alert(
     """确认风险警报"""
     try:
         success = risk_manager.acknowledge_alert(user_id, request.alert_id)
-        
+
         if success:
             return RiskAlertActionResponse(
                 success=True,
@@ -306,10 +304,10 @@ async def acknowledge_risk_alert(
                 success=False,
                 message="警报不存在或已处理"
             )
-            
+
     except Exception as e:
         logger.error(f"确认风险警报异常: {e}")
-        raise HTTPException(status_code=500, detail=f"确认风险警报失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"确认风险警报失败: {e!s}")
 
 
 @router.post("/alerts/{user_id}/resolve", response_model=RiskAlertActionResponse)
@@ -321,7 +319,7 @@ async def resolve_risk_alert(
     """解决风险警报"""
     try:
         success = risk_manager.resolve_alert(user_id, request.alert_id)
-        
+
         if success:
             return RiskAlertActionResponse(
                 success=True,
@@ -332,10 +330,10 @@ async def resolve_risk_alert(
                 success=False,
                 message="警报不存在或已处理"
             )
-            
+
     except Exception as e:
         logger.error(f"解决风险警报异常: {e}")
-        raise HTTPException(status_code=500, detail=f"解决风险警报失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"解决风险警报失败: {e!s}")
 
 
 @router.post("/assess/{user_id}", response_model=RiskAssessmentResponse)
@@ -353,7 +351,7 @@ async def assess_risk(
             volume=Decimal("1000.0"),
             timestamp=datetime.now()
         )
-        
+
         # 执行风险评估
         approved, message, alerts = risk_manager.assess_order_risk(
             user_id=user_id,
@@ -361,7 +359,7 @@ async def assess_risk(
             order_amount=request.order_amount,
             current_price=current_price
         )
-        
+
         # 构建警报响应
         alert_responses = []
         for alert in alerts:
@@ -382,11 +380,11 @@ async def assess_risk(
                 resolved_at=alert.resolved_at,
                 duration_seconds=alert.get_duration()
             ))
-        
+
         # 获取风险等级
         profile = risk_manager.get_risk_profile(user_id)
         risk_level = profile.risk_level.value if profile else "UNKNOWN"
-        
+
         # 生成建议
         recommendations = []
         if not approved:
@@ -395,7 +393,7 @@ async def assess_risk(
             recommendations.append("建议降低订单金额或等待市场条件改善")
         if risk_level == "HIGH":
             recommendations.append("建议降低风险等级或减少交易频率")
-        
+
         return RiskAssessmentResponse(
             approved=approved,
             message=message,
@@ -403,10 +401,10 @@ async def assess_risk(
             alerts=alert_responses,
             recommendations=recommendations
         )
-        
+
     except Exception as e:
         logger.error(f"风险评估异常: {e}")
-        raise HTTPException(status_code=500, detail=f"风险评估失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"风险评估失败: {e!s}")
 
 
 @router.get("/metrics/{user_id}", response_model=RiskMetricsResponse)
@@ -419,7 +417,7 @@ async def get_risk_metrics(
         metrics = risk_manager.get_risk_metrics(user_id)
         if not metrics:
             raise HTTPException(status_code=404, detail="风险指标不存在")
-        
+
         return RiskMetricsResponse(
             user_id=metrics.user_id,
             current_balance=metrics.current_balance,
@@ -432,12 +430,12 @@ async def get_risk_metrics(
             position_ratio=metrics.position_ratio,
             last_order_time=metrics.last_order_time
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"获取风险指标异常: {e}")
-        raise HTTPException(status_code=500, detail=f"获取风险指标失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"获取风险指标失败: {e!s}")
 
 
 @router.get("/summary/{user_id}", response_model=RiskSummaryResponse)
@@ -448,7 +446,7 @@ async def get_risk_summary(
     """获取风险摘要"""
     try:
         summary = risk_manager.get_risk_summary(user_id)
-        
+
         return RiskSummaryResponse(
             user_id=summary["user_id"],
             risk_level=summary["risk_level"],
@@ -461,10 +459,10 @@ async def get_risk_summary(
             orders_this_hour=summary["orders_this_hour"],
             trading_allowed=summary["trading_allowed"]
         )
-        
+
     except Exception as e:
         logger.error(f"获取风险摘要异常: {e}")
-        raise HTTPException(status_code=500, detail=f"获取风险摘要失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"获取风险摘要失败: {e!s}")
 
 
 @router.get("/report/{user_id}", response_model=RiskReportResponse)
@@ -478,18 +476,18 @@ async def get_risk_report(
         profile = risk_manager.get_risk_profile(user_id)
         if not profile:
             raise HTTPException(status_code=404, detail="风险配置不存在")
-        
+
         # 获取风险指标
         metrics = risk_manager.get_risk_metrics(user_id)
         if not metrics:
             raise HTTPException(status_code=404, detail="风险指标不存在")
-        
+
         # 获取活跃警报
         alerts = risk_manager.get_active_alerts(user_id)
-        
+
         # 获取风险摘要
         summary = risk_manager.get_risk_summary(user_id)
-        
+
         # 构建报告
         return RiskReportResponse(
             user_id=user_id,
@@ -563,9 +561,9 @@ async def get_risk_report(
                 "设置合理的止损点"
             ]
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"获取风险报告异常: {e}")
-        raise HTTPException(status_code=500, detail=f"获取风险报告失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"获取风险报告失败: {e!s}")

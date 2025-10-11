@@ -3,13 +3,13 @@
 import json
 from datetime import datetime, timedelta
 from functools import lru_cache
-from typing import Dict, Optional, Tuple
 
 from redis.asyncio import Redis
 
 from binance.config import get_settings
 from binance.config.constants import CACHE_TTL_TOKEN_INFO, CacheKeyPrefix
 from binance.infrastructure.logging import get_logger
+
 
 logger = get_logger(__name__)
 
@@ -28,7 +28,7 @@ class CacheManager:
 
     async def get_token_precision(
         self, symbol_short: str
-    ) -> Optional[Tuple[int, int]]:
+    ) -> tuple[int, int] | None:
         """从缓存获取代币精度
 
         Args:
@@ -105,7 +105,7 @@ class CacheManager:
             )
             return False
 
-    async def get_token_mapping(self, symbol_short: str) -> Optional[Dict[str, str]]:
+    async def get_token_mapping(self, symbol_short: str) -> dict[str, str] | None:
         """从缓存获取代币符号映射
 
         Args:
@@ -142,7 +142,7 @@ class CacheManager:
         symbol_short: str,
         order_api_symbol: str,
         websocket_symbol: str,
-        alpha_id: Optional[str] = None,
+        alpha_id: str | None = None,
     ) -> bool:
         """设置代币符号映射到缓存
 
@@ -184,7 +184,7 @@ class CacheManager:
             return False
 
     async def add_price_to_history(
-        self, symbol: str, price: float, timestamp: Optional[datetime] = None
+        self, symbol: str, price: float, timestamp: datetime | None = None
     ) -> bool:
         """添加价格到历史记录（用于波动监控）
 
@@ -231,8 +231,8 @@ class CacheManager:
             return False
 
     async def get_price_history(
-        self, symbol: str, window_seconds: Optional[int] = None
-    ) -> list[Dict]:
+        self, symbol: str, window_seconds: int | None = None
+    ) -> list[dict]:
         """获取价格历史记录
 
         Args:

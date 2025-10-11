@@ -1,15 +1,13 @@
 """风险管理服务"""
 
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from decimal import Decimal
-from typing import List, Optional, Dict, Any, Tuple
-from dataclasses import dataclass
+from typing import Any
 
-from binance.domain.entities.risk_profile import RiskProfile, RiskLevel, RiskFactor
-from binance.domain.entities.risk_alert import RiskAlert, AlertSeverity, AlertStatus
 from binance.domain.entities.price_data import PriceData
-from binance.domain.entities.oto_order_pair import OTOOrderPair
-from binance.domain.value_objects.price import Price
+from binance.domain.entities.risk_alert import AlertSeverity, RiskAlert
+from binance.domain.entities.risk_profile import RiskFactor, RiskLevel, RiskProfile
 
 
 @dataclass
@@ -22,55 +20,55 @@ class RiskMetrics:
     consecutive_losses: int
     orders_count_today: int
     orders_count_hour: int
-    last_order_time: Optional[datetime]
+    last_order_time: datetime | None
     price_volatility: Decimal
     position_ratio: Decimal
 
 
 class RiskManager:
     """风险管理服务"""
-    
+
     def __init__(self):
-        self._risk_profiles: Dict[int, RiskProfile] = {}
-        self._active_alerts: Dict[int, List[RiskAlert]] = {}
-        self._risk_metrics: Dict[int, RiskMetrics] = {}
-    
+        self._risk_profiles: dict[int, RiskProfile] = {}
+        self._active_alerts: dict[int, list[RiskAlert]] = {}
+        self._risk_metrics: dict[int, RiskMetrics] = {}
+
     def set_risk_profile(self, profile: RiskProfile) -> None:
         """设置用户风险配置"""
         self._risk_profiles[profile.user_id] = profile
-    
-    def get_risk_profile(self, user_id: int) -> Optional[RiskProfile]:
+
+    def get_risk_profile(self, user_id: int) -> RiskProfile | None:
         """获取用户风险配置"""
         return self._risk_profiles.get(user_id)
-    
+
     def update_risk_metrics(self, user_id: int, metrics: RiskMetrics) -> None:
         """更新风险指标"""
         self._risk_metrics[user_id] = metrics
-    
-    def get_risk_metrics(self, user_id: int) -> Optional[RiskMetrics]:
+
+    def get_risk_metrics(self, user_id: int) -> RiskMetrics | None:
         """获取风险指标"""
         return self._risk_metrics.get(user_id)
-    
+
     def assess_order_risk(
-        self, 
-        user_id: int, 
-        symbol: str, 
+        self,
+        user_id: int,
+        symbol: str,
         order_amount: Decimal,
         current_price: PriceData
-    ) -> Tuple[bool, str, List[RiskAlert]]:
+    ) -> tuple[bool, str, list[RiskAlert]]:
         """评估订单风险"""
         alerts = []
-        
+
         # 获取用户风险配置
         profile = self.get_risk_profile(user_id)
         if not profile:
             return False, "用户风险配置不存在", []
-        
+
         # 获取风险指标
         metrics = self.get_risk_metrics(user_id)
         if not metrics:
             return False, "用户风险指标不存在", []
-        
+
         # 检查交易时间
         if not profile.is_trading_allowed(datetime.now()):
             alert = self._create_alert(
@@ -83,7 +81,7 @@ class RiskManager:
             )
             alerts.append(alert)
             return False, "交易时间限制", alerts
-        
+
         # 检查余额风险
         if metrics.current_balance < order_amount:
             alert = self._create_alert(
@@ -98,7 +96,7 @@ class RiskManager:
             )
             alerts.append(alert)
             return False, "余额不足", alerts
-        
+
         # 检查仓位风险
         max_position = profile.get_max_order_amount(metrics.current_balance)
         if order_amount > max_position:
@@ -114,7 +112,7 @@ class RiskManager:
             )
             alerts.append(alert)
             return False, "仓位过大", alerts
-        
+
         # 检查价格波动风险
         if metrics.price_volatility > profile.max_price_volatility:
             alert = self._create_alert(
@@ -129,7 +127,7 @@ class RiskManager:
             )
             alerts.append(alert)
             return False, "价格波动过大", alerts
-        
+
         # 检查订单频率风险
         if metrics.orders_count_hour >= profile.max_orders_per_hour:
             alert = self._create_alert(
@@ -144,7 +142,7 @@ class RiskManager:
             )
             alerts.append(alert)
             return False, "订单频率过高", alerts
-        
+
         if metrics.orders_count_today >= profile.max_orders_per_day:
             alert = self._create_alert(
                 user_id=user_id,
@@ -158,7 +156,7 @@ class RiskManager:
             )
             alerts.append(alert)
             return False, "每日订单数超限", alerts
-        
+
         # 检查连续亏损风险
         if profile.should_pause_trading(metrics.consecutive_losses, metrics.daily_pnl):
             alert = self._create_alert(
@@ -173,7 +171,7 @@ class RiskManager:
             )
             alerts.append(alert)
             return False, "交易暂停", alerts
-        
+
         # 检查每日交易量风险
         if metrics.daily_volume + order_amount > profile.max_daily_volume:
             alert = self._create_alert(
@@ -188,40 +186,40 @@ class RiskManager:
             )
             alerts.append(alert)
             return False, "每日交易量超限", alerts
-        
+
         return True, "风险检查通过", alerts
-    
+
     def monitor_price_volatility(
-        self, 
-        user_id: int, 
-        symbol: str, 
+        self,
+        user_id: int,
+        symbol: str,
         price_data: PriceData,
-        price_history: List[PriceData]
-    ) -> List[RiskAlert]:
+        price_history: list[PriceData]
+    ) -> list[RiskAlert]:
         """监控价格波动"""
         alerts = []
-        
+
         profile = self.get_risk_profile(user_id)
         if not profile:
             return alerts
-        
+
         # 计算价格波动
         if len(price_history) < 2:
             return alerts
-        
+
         # 获取时间窗口内的价格数据
         window_start = datetime.now() - timedelta(minutes=profile.volatility_window_minutes)
         window_prices = [p for p in price_history if p.timestamp >= window_start]
-        
+
         if len(window_prices) < 2:
             return alerts
-        
+
         # 计算波动率
         prices = [float(p.price.value) for p in window_prices]
         min_price = min(prices)
         max_price = max(prices)
         volatility = ((max_price - min_price) / min_price) * 100
-        
+
         if volatility > profile.max_price_volatility:
             alert = self._create_alert(
                 user_id=user_id,
@@ -235,12 +233,12 @@ class RiskManager:
                 data={"symbol": symbol, "window_minutes": profile.volatility_window_minutes}
             )
             alerts.append(alert)
-        
+
         return alerts
-    
+
     def create_risk_profile(
-        self, 
-        user_id: int, 
+        self,
+        user_id: int,
         risk_level: RiskLevel = RiskLevel.MEDIUM
     ) -> RiskProfile:
         """创建默认风险配置"""
@@ -286,7 +284,7 @@ class RiskManager:
                 max_consecutive_losses=3,
                 max_daily_loss=Decimal("500.0")
             )
-    
+
     def _create_alert(
         self,
         user_id: int,
@@ -295,9 +293,9 @@ class RiskManager:
         severity: AlertSeverity,
         risk_factor: RiskFactor,
         risk_level: RiskLevel,
-        current_value: Optional[Decimal] = None,
-        threshold_value: Optional[Decimal] = None,
-        data: Optional[Dict[str, Any]] = None
+        current_value: Decimal | None = None,
+        threshold_value: Decimal | None = None,
+        data: dict[str, Any] | None = None
     ) -> RiskAlert:
         """创建风险警报"""
         alert = RiskAlert(
@@ -313,18 +311,18 @@ class RiskManager:
             data=data,
             triggered_at=datetime.now()
         )
-        
+
         # 添加到活跃警报列表
         if user_id not in self._active_alerts:
             self._active_alerts[user_id] = []
         self._active_alerts[user_id].append(alert)
-        
+
         return alert
-    
-    def get_active_alerts(self, user_id: int) -> List[RiskAlert]:
+
+    def get_active_alerts(self, user_id: int) -> list[RiskAlert]:
         """获取用户活跃警报"""
         return self._active_alerts.get(user_id, [])
-    
+
     def acknowledge_alert(self, user_id: int, alert_id: int) -> bool:
         """确认警报"""
         alerts = self._active_alerts.get(user_id, [])
@@ -333,7 +331,7 @@ class RiskManager:
                 alert.acknowledge()
                 return True
         return False
-    
+
     def resolve_alert(self, user_id: int, alert_id: int) -> bool:
         """解决警报"""
         alerts = self._active_alerts.get(user_id, [])
@@ -342,13 +340,13 @@ class RiskManager:
                 alert.resolve()
                 return True
         return False
-    
-    def get_risk_summary(self, user_id: int) -> Dict[str, Any]:
+
+    def get_risk_summary(self, user_id: int) -> dict[str, Any]:
         """获取风险摘要"""
         profile = self.get_risk_profile(user_id)
         metrics = self.get_risk_metrics(user_id)
         alerts = self.get_active_alerts(user_id)
-        
+
         return {
             "user_id": user_id,
             "risk_level": profile.risk_level.value if profile else "UNKNOWN",

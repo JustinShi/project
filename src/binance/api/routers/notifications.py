@@ -1,32 +1,30 @@
 """通知相关API路由"""
 
-from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from binance.api.dependencies import get_db_session, get_user_repository
+from binance.api.dependencies import get_user_repository
 from binance.api.schemas.notification_schema import (
-    NotificationCreateRequest,
-    NotificationResponse,
     NotificationListResponse,
     NotificationMarkReadRequest,
     NotificationMarkReadResponse,
-    NotificationStatisticsResponse,
+    NotificationResponse,
     NotificationSettingsResponse,
     NotificationSettingsUpdateRequest,
+    NotificationStatisticsResponse,
     NotificationTestRequest,
-    NotificationTestResponse
+    NotificationTestResponse,
 )
 from binance.application.services.notification_service import NotificationService
 from binance.domain.repositories.user_repository import UserRepository
 from binance.infrastructure.logging.logger import get_logger
+
 
 logger = get_logger(__name__)
 
 router = APIRouter(prefix="/notifications", tags=["notifications"])
 
 # 全局通知服务实例
-_notification_service: Optional[NotificationService] = None
+_notification_service: NotificationService | None = None
 
 
 def get_notification_service(user_repo: UserRepository = Depends(get_user_repository)) -> NotificationService:
@@ -48,7 +46,7 @@ async def get_user_notifications(
     try:
         # 获取通知历史
         notifications_data = await notification_service.get_notification_history(user_id, limit)
-        
+
         # 构建通知响应列表
         notifications = []
         for notif_data in notifications_data:
@@ -63,19 +61,19 @@ async def get_user_notifications(
                 created_at=notif_data.get("created_at"),
                 read_at=notif_data.get("read_at")
             ))
-        
+
         # 计算未读数量
         unread_count = sum(1 for n in notifications if not n.is_read)
-        
+
         return NotificationListResponse(
             notifications=notifications,
             total=len(notifications),
             unread_count=unread_count
         )
-        
+
     except Exception as e:
         logger.error(f"获取用户通知异常: {e}")
-        raise HTTPException(status_code=500, detail=f"获取用户通知失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"获取用户通知失败: {e!s}")
 
 
 @router.post("/mark-read", response_model=NotificationMarkReadResponse)
@@ -90,7 +88,7 @@ async def mark_notification_read(
             user_id=user_id,
             notification_id=request.notification_id
         )
-        
+
         if success:
             return NotificationMarkReadResponse(
                 success=True,
@@ -101,10 +99,10 @@ async def mark_notification_read(
                 success=False,
                 message="标记通知已读失败"
             )
-            
+
     except Exception as e:
         logger.error(f"标记通知已读异常: {e}")
-        raise HTTPException(status_code=500, detail=f"标记通知已读失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"标记通知已读失败: {e!s}")
 
 
 @router.get("/statistics/{user_id}", response_model=NotificationStatisticsResponse)
@@ -116,17 +114,17 @@ async def get_notification_statistics(
     try:
         # 获取通知历史
         notifications_data = await notification_service.get_notification_history(user_id, 100)
-        
+
         # 统计信息
         total_notifications = len(notifications_data)
         unread_notifications = sum(1 for n in notifications_data if not n.get("is_read", False))
-        
+
         # 按类型统计
         notifications_by_type = {}
         for notif in notifications_data:
             notif_type = notif.get("type", "unknown")
             notifications_by_type[notif_type] = notifications_by_type.get(notif_type, 0) + 1
-        
+
         # 最近通知（最多10条）
         recent_notifications = []
         for notif_data in notifications_data[:10]:
@@ -141,17 +139,17 @@ async def get_notification_statistics(
                 created_at=notif_data.get("created_at"),
                 read_at=notif_data.get("read_at")
             ))
-        
+
         return NotificationStatisticsResponse(
             total_notifications=total_notifications,
             unread_notifications=unread_notifications,
             notifications_by_type=notifications_by_type,
             recent_notifications=recent_notifications
         )
-        
+
     except Exception as e:
         logger.error(f"获取通知统计异常: {e}")
-        raise HTTPException(status_code=500, detail=f"获取通知统计失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"获取通知统计失败: {e!s}")
 
 
 @router.get("/settings/{user_id}", response_model=NotificationSettingsResponse)
@@ -172,10 +170,10 @@ async def get_notification_settings(
             order_updates=True,
             balance_alerts=True
         )
-        
+
     except Exception as e:
         logger.error(f"获取通知设置异常: {e}")
-        raise HTTPException(status_code=500, detail=f"获取通知设置失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"获取通知设置失败: {e!s}")
 
 
 @router.put("/settings/{user_id}", response_model=NotificationSettingsResponse)
@@ -197,10 +195,10 @@ async def update_notification_settings(
             order_updates=request.order_updates if request.order_updates is not None else True,
             balance_alerts=request.balance_alerts if request.balance_alerts is not None else True
         )
-        
+
     except Exception as e:
         logger.error(f"更新通知设置异常: {e}")
-        raise HTTPException(status_code=500, detail=f"更新通知设置失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"更新通知设置失败: {e!s}")
 
 
 @router.post("/test", response_model=NotificationTestResponse)
@@ -219,16 +217,16 @@ async def test_notification(
             message=request.message,
             data={"test": True}
         )
-        
+
         return NotificationTestResponse(
             success=True,
             message="测试通知发送成功",
             notification_id=f"test_{user_id}_{request.type}"
         )
-        
+
     except Exception as e:
         logger.error(f"测试通知异常: {e}")
-        raise HTTPException(status_code=500, detail=f"测试通知失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"测试通知失败: {e!s}")
 
 
 @router.post("/cleanup")
@@ -245,7 +243,7 @@ async def cleanup_old_notifications(
             "message": f"已清理 {days} 天前的通知",
             "cleaned_count": 0
         }
-        
+
     except Exception as e:
         logger.error(f"清理旧通知异常: {e}")
-        raise HTTPException(status_code=500, detail=f"清理旧通知失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"清理旧通知失败: {e!s}")

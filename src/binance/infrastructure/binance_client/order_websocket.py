@@ -1,25 +1,28 @@
 """Binance订单WebSocket客户端"""
 
 import asyncio
+import contextlib
 import json
+from collections.abc import Callable
+from typing import Any
+
 import websockets
-from typing import Callable, Optional, Dict, Any
-from datetime import datetime
 
 from binance.infrastructure.logging.logger import get_logger
+
 
 logger = get_logger(__name__)
 
 
 class OrderWebSocketConnector:
     """订单WebSocket连接器"""
-    
+
     def __init__(
         self,
         user_id: int,
         listen_key: str,
-        on_order_update: Callable[[Dict[str, Any]], None],
-        on_connection_event: Optional[Callable[[str, Dict], None]] = None,
+        on_order_update: Callable[[dict[str, Any]], None],
+        on_connection_event: Callable[[str, dict], None] | None = None,
         reconnect_interval: int = 30,
         max_reconnect_attempts: int = 10
     ):
@@ -29,17 +32,17 @@ class OrderWebSocketConnector:
         self.on_connection_event = on_connection_event
         self.reconnect_interval = reconnect_interval
         self.max_reconnect_attempts = max_reconnect_attempts
-        
-        self._websocket: Optional[websockets.WebSocketClientProtocol] = None
+
+        self._websocket: websockets.WebSocketClientProtocol | None = None
         self._running = False
         self._reconnect_attempts = 0
-        self._listen_task: Optional[asyncio.Task] = None
-    
+        self._listen_task: asyncio.Task | None = None
+
     async def start(self) -> None:
         """启动WebSocket连接"""
         self._running = True
         self._reconnect_attempts = 0
-        
+
         while self._running and self._reconnect_attempts < self.max_reconnect_attempts:
             try:
                 await self._connect()
@@ -52,19 +55,17 @@ class OrderWebSocketConnector:
                 logger.error(f"订单WebSocket连接异常: {e}")
                 if self._running:
                     await self._handle_reconnect()
-    
+
     async def stop(self) -> None:
         """停止WebSocket连接"""
         self._running = False
-        
+
         # 停止监听任务
         if self._listen_task and not self._listen_task.done():
             self._listen_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._listen_task
-            except asyncio.CancelledError:
-                pass
-        
+
         # 关闭WebSocket连接
         if self._websocket:
             try:
@@ -73,18 +74,18 @@ class OrderWebSocketConnector:
                 logger.warning(f"关闭WebSocket连接异常: {e}")
             finally:
                 self._websocket = None
-    
+
     async def _connect(self) -> None:
         """建立WebSocket连接"""
         # 构建WebSocket URL - 币安 Alpha 的订单推送使用不同的地址
-        ws_url = f"wss://nbstream.binance.com/w3w/stream"
-        
+        ws_url = "wss://nbstream.binance.com/w3w/stream"
+
         logger.info(f"连接订单WebSocket: {ws_url}")
-        
+
         try:
             # 建立WebSocket连接
             self._websocket = await websockets.connect(ws_url)
-            
+
             # 发送订阅消息
             subscribe_msg = {
                 "method": "SUBSCRIBE",
@@ -93,22 +94,22 @@ class OrderWebSocketConnector:
             }
             await self._websocket.send(json.dumps(subscribe_msg))
             logger.info(f"已发送订阅消息: {subscribe_msg}")
-            
+
             # 触发连接成功事件
             if self.on_connection_event:
                 await self.on_connection_event("connected", {"url": ws_url})
-            
+
             # 开始监听消息
             self._listen_task = asyncio.create_task(self._listen_messages())
-            
+
             logger.info("订单WebSocket连接成功")
-            
+
         except Exception as e:
             logger.error(f"订单WebSocket连接异常: {e}")
             if self.on_connection_event:
                 await self.on_connection_event("error", {"error": str(e)})
             raise
-    
+
     async def _listen_messages(self) -> None:
         """监听WebSocket消息"""
         try:
@@ -124,27 +125,27 @@ class OrderWebSocketConnector:
             logger.error(f"监听消息异常: {e}")
             if self._running:
                 await self._handle_reconnect()
-    
+
     async def _handle_message(self, message: str) -> None:
         """处理WebSocket消息"""
         try:
             data = json.loads(message)
-            
+
             # 打印所有收到的消息（用于调试）
             logger.info(f"收到WebSocket消息: {data}")
-            
+
             # 检查是否是订阅响应
             if "result" in data or "id" in data:
                 logger.info(f"订阅响应: {data}")
                 return
-            
+
             # 检查是否是流数据（币安Alpha格式）
             if "stream" in data and "data" in data:
                 # 币安Alpha的消息格式: {"stream": "alpha@xxx", "data": {...}}
                 stream = data.get("stream")
                 inner_data = data.get("data")
                 logger.info(f"流消息 - stream: {stream}, data: {inner_data}")
-                
+
                 # 处理内部数据
                 if isinstance(inner_data, dict) and "e" in inner_data:
                     event_type = inner_data["e"]
@@ -155,11 +156,11 @@ class OrderWebSocketConnector:
                     else:
                         logger.debug(f"未处理的事件类型: {event_type}")
                 return
-            
+
             # 检查直接消息类型（标准格式）
             if "e" in data:  # 事件类型
                 event_type = data["e"]
-                
+
                 if event_type == "executionReport":
                     # 订单执行报告
                     await self._handle_order_execution(data)
@@ -170,13 +171,13 @@ class OrderWebSocketConnector:
                     logger.debug(f"未处理的事件类型: {event_type}")
             else:
                 logger.debug(f"未识别的消息格式: {data}")
-                
+
         except json.JSONDecodeError as e:
             logger.error(f"解析WebSocket消息失败: {e}")
         except Exception as e:
             logger.error(f"处理WebSocket消息异常: {e}")
-    
-    async def _handle_order_execution(self, data: Dict[str, Any]) -> None:
+
+    async def _handle_order_execution(self, data: dict[str, Any]) -> None:
         """处理订单执行报告"""
         try:
             order_info = {
@@ -196,17 +197,17 @@ class OrderWebSocketConnector:
                 "commission": data.get("n"),         # 手续费
                 "commission_asset": data.get("N"),   # 手续费资产
             }
-            
+
             logger.info(f"订单执行报告: {order_info}")
-            
+
             # 调用回调函数
             if self.on_order_update:
                 await self.on_order_update(order_info)
-                
+
         except Exception as e:
             logger.error(f"处理订单执行报告异常: {e}")
-    
-    async def _handle_account_update(self, data: Dict[str, Any]) -> None:
+
+    async def _handle_account_update(self, data: dict[str, Any]) -> None:
         """处理账户余额更新"""
         try:
             account_info = {
@@ -215,20 +216,20 @@ class OrderWebSocketConnector:
                 "balances": data.get("B", []),
                 "time": data.get("E"),
             }
-            
+
             logger.info(f"账户余额更新: {account_info}")
-            
+
             # 调用回调函数
             if self.on_order_update:
                 await self.on_order_update(account_info)
-                
+
         except Exception as e:
             logger.error(f"处理账户更新异常: {e}")
-    
-    async def _handle_connection_event(self, event_type: str, data: Dict) -> None:
+
+    async def _handle_connection_event(self, event_type: str, data: dict) -> None:
         """处理连接事件"""
         logger.info(f"订单WebSocket连接事件: {event_type}")
-        
+
         if event_type == "connected":
             self._reconnect_attempts = 0
             logger.info("订单WebSocket连接成功")
@@ -240,23 +241,23 @@ class OrderWebSocketConnector:
             logger.error(f"订单WebSocket连接错误: {data}")
             if self._running:
                 await self._handle_reconnect()
-        
+
         # 调用外部回调
         if self.on_connection_event:
             await self.on_connection_event(event_type, data)
-    
+
     async def _handle_reconnect(self) -> None:
         """处理重连"""
         if not self._running:
             return
-        
+
         self._reconnect_attempts += 1
         wait_time = min(self.reconnect_interval * self._reconnect_attempts, 300)  # 最大5分钟
-        
+
         logger.info(f"订单WebSocket重连尝试 {self._reconnect_attempts}/{self.max_reconnect_attempts}, 等待 {wait_time} 秒")
-        
+
         await asyncio.sleep(wait_time)
-    
+
     def is_connected(self) -> bool:
         """检查是否已连接"""
         if self._websocket is None:
@@ -272,8 +273,8 @@ class OrderWebSocketConnector:
         except:
             # 如果检查失败，看监听任务是否还在运行
             return self._listen_task is not None and not self._listen_task.done()
-    
-    def get_connection_info(self) -> Dict[str, Any]:
+
+    def get_connection_info(self) -> dict[str, Any]:
         """获取连接信息"""
         return {
             "user_id": self.user_id,

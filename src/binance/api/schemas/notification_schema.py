@@ -1,7 +1,8 @@
 """通知相关API模式"""
 
 from datetime import datetime
-from typing import Optional, Dict, Any, List
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 
@@ -12,15 +13,15 @@ class NotificationResponse(BaseModel):
     type: str = Field(..., description="通知类型")
     title: str = Field(..., description="通知标题")
     message: str = Field(..., description="通知内容")
-    data: Optional[Dict[str, Any]] = Field(None, description="附加数据")
+    data: dict[str, Any] | None = Field(None, description="附加数据")
     is_read: bool = Field(..., description="是否已读")
     created_at: datetime = Field(..., description="创建时间")
-    read_at: Optional[datetime] = Field(None, description="已读时间")
+    read_at: datetime | None = Field(None, description="已读时间")
 
 
 class NotificationListResponse(BaseModel):
     """通知列表响应"""
-    notifications: List[NotificationResponse] = Field(..., description="通知列表")
+    notifications: list[NotificationResponse] = Field(..., description="通知列表")
     total: int = Field(..., description="总数量")
     unread_count: int = Field(..., description="未读数量")
 
@@ -40,8 +41,8 @@ class NotificationStatisticsResponse(BaseModel):
     """通知统计响应"""
     total_notifications: int = Field(..., description="总通知数")
     unread_notifications: int = Field(..., description="未读通知数")
-    notifications_by_type: Dict[str, int] = Field(..., description="按类型统计")
-    recent_notifications: List[NotificationResponse] = Field(..., description="最近通知")
+    notifications_by_type: dict[str, int] = Field(..., description="按类型统计")
+    recent_notifications: list[NotificationResponse] = Field(..., description="最近通知")
 
 
 class NotificationSettingsResponse(BaseModel):
@@ -57,12 +58,12 @@ class NotificationSettingsResponse(BaseModel):
 
 class NotificationSettingsUpdateRequest(BaseModel):
     """更新通知设置请求"""
-    email_notifications: Optional[bool] = Field(None, description="邮件通知")
-    sms_notifications: Optional[bool] = Field(None, description="短信通知")
-    push_notifications: Optional[bool] = Field(None, description="推送通知")
-    volatility_alerts: Optional[bool] = Field(None, description="价格波动警报")
-    order_updates: Optional[bool] = Field(None, description="订单更新通知")
-    balance_alerts: Optional[bool] = Field(None, description="余额警报")
+    email_notifications: bool | None = Field(None, description="邮件通知")
+    sms_notifications: bool | None = Field(None, description="短信通知")
+    push_notifications: bool | None = Field(None, description="推送通知")
+    volatility_alerts: bool | None = Field(None, description="价格波动警报")
+    order_updates: bool | None = Field(None, description="订单更新通知")
+    balance_alerts: bool | None = Field(None, description="余额警报")
 
 
 class NotificationTestRequest(BaseModel):
@@ -76,4 +77,4 @@ class NotificationTestResponse(BaseModel):
     """测试通知响应"""
     success: bool = Field(..., description="是否成功")
     message: str = Field(..., description="消息")
-    notification_id: Optional[str] = Field(None, description="通知ID")
+    notification_id: str | None = Field(None, description="通知ID")

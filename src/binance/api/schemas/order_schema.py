@@ -2,10 +2,8 @@
 
 from datetime import datetime
 from decimal import Decimal
-from typing import Optional, Dict, Any
-from pydantic import BaseModel, Field
 
-from binance.config.constants import OTOOrderPairStatus
+from pydantic import BaseModel, Field
 
 
 class OrderExecuteRequest(BaseModel):
@@ -20,13 +18,13 @@ class OrderExecuteResponse(BaseModel):
     """订单执行响应"""
     success: bool = Field(..., description="执行是否成功")
     message: str = Field(..., description="执行消息")
-    order_pair_id: Optional[int] = Field(None, description="订单对ID")
-    buy_order_id: Optional[str] = Field(None, description="买单ID")
-    sell_order_id: Optional[str] = Field(None, description="卖单ID")
-    buy_price: Optional[Decimal] = Field(None, description="买单价格")
-    sell_price: Optional[Decimal] = Field(None, description="卖单价格")
-    quantity: Optional[Decimal] = Field(None, description="订单数量")
-    status: Optional[str] = Field(None, description="订单状态")
+    order_pair_id: int | None = Field(None, description="订单对ID")
+    buy_order_id: str | None = Field(None, description="买单ID")
+    sell_order_id: str | None = Field(None, description="卖单ID")
+    buy_price: Decimal | None = Field(None, description="买单价格")
+    sell_price: Decimal | None = Field(None, description="卖单价格")
+    quantity: Decimal | None = Field(None, description="订单数量")
+    status: str | None = Field(None, description="订单状态")
 
 
 class OrderStatusResponse(BaseModel):
@@ -35,11 +33,11 @@ class OrderStatusResponse(BaseModel):
     user_id: int = Field(..., description="用户ID")
     symbol: str = Field(..., description="交易对符号")
     status: str = Field(..., description="订单状态")
-    buy_order_id: Optional[str] = Field(None, description="买单ID")
-    sell_order_id: Optional[str] = Field(None, description="卖单ID")
-    buy_price: Optional[Decimal] = Field(None, description="买单价格")
-    sell_price: Optional[Decimal] = Field(None, description="卖单价格")
-    quantity: Optional[Decimal] = Field(None, description="订单数量")
+    buy_order_id: str | None = Field(None, description="买单ID")
+    sell_order_id: str | None = Field(None, description="卖单ID")
+    buy_price: Decimal | None = Field(None, description="买单价格")
+    sell_price: Decimal | None = Field(None, description="卖单价格")
+    quantity: Decimal | None = Field(None, description="订单数量")
     created_at: datetime = Field(..., description="创建时间")
     updated_at: datetime = Field(..., description="更新时间")
 
@@ -76,9 +74,9 @@ class WebSocketStatusResponse(BaseModel):
     """WebSocket状态响应"""
     user_id: int = Field(..., description="用户ID")
     connected: bool = Field(..., description="是否已连接")
-    listen_key: Optional[str] = Field(None, description="ListenKey")
+    listen_key: str | None = Field(None, description="ListenKey")
     reconnect_attempts: int = Field(..., description="重连尝试次数")
-    last_activity: Optional[datetime] = Field(None, description="最后活动时间")
+    last_activity: datetime | None = Field(None, description="最后活动时间")
 
 
 class OrderMonitorResponse(BaseModel):

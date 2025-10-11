@@ -1,41 +1,44 @@
 """系统监控API路由"""
 
-from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.ext.asyncio import AsyncSession
-from datetime import datetime, timedelta
-from decimal import Decimal
+from datetime import datetime
 
-from binance.api.dependencies import get_db_session, get_user_repository
+from fastapi import APIRouter, Depends, HTTPException, Query
+
 from binance.api.schemas.monitoring_schema import (
-    SystemMetricResponse,
-    SystemHealthResponse,
-    PerformanceMetricsResponse,
-    AlertRuleResponse,
     AlertRuleCreateRequest,
-    AlertRuleUpdateRequest,
-    SystemAlertResponse,
-    SystemAlertListResponse,
-    SystemAlertActionRequest,
-    SystemAlertActionResponse,
-    SystemStatusResponse,
-    SystemSummaryResponse,
+    AlertRuleResponse,
     MetricUpdateRequest,
     MetricUpdateResponse,
     PerformanceHistoryResponse,
-    SystemDashboardResponse
+    PerformanceMetricsResponse,
+    SystemAlertActionRequest,
+    SystemAlertActionResponse,
+    SystemAlertListResponse,
+    SystemAlertResponse,
+    SystemDashboardResponse,
+    SystemHealthResponse,
+    SystemMetricResponse,
+    SystemStatusResponse,
+    SystemSummaryResponse,
 )
-from binance.domain.services.system_monitor import SystemMonitor, PerformanceMetrics
-from binance.domain.entities.system_metrics import SystemMetric, MetricType, MetricStatus
-from binance.domain.entities.alert_rule import AlertRule, SystemAlert, AlertRuleType, AlertRuleStatus
+from binance.domain.entities.alert_rule import (
+    AlertRule,
+    AlertRuleType,
+)
+from binance.domain.entities.system_metrics import (
+    MetricStatus,
+    MetricType,
+)
+from binance.domain.services.system_monitor import SystemMonitor
 from binance.infrastructure.logging.logger import get_logger
+
 
 logger = get_logger(__name__)
 
 router = APIRouter(prefix="/monitoring", tags=["monitoring"])
 
 # 全局系统监控服务实例
-_system_monitor: Optional[SystemMonitor] = None
+_system_monitor: SystemMonitor | None = None
 
 
 def get_system_monitor() -> SystemMonitor:
@@ -56,7 +59,7 @@ async def get_system_health(
     """获取系统健康状态"""
     try:
         health = system_monitor.get_system_health()
-        
+
         return SystemHealthResponse(
             overall_status=health.overall_status.value,
             healthy_metrics=health.healthy_metrics,
@@ -86,20 +89,20 @@ async def get_system_health(
                 for metric in health.metrics
             ]
         )
-        
+
     except Exception as e:
         logger.error(f"获取系统健康状态异常: {e}")
-        raise HTTPException(status_code=500, detail=f"获取系统健康状态失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"获取系统健康状态失败: {e!s}")
 
 
-@router.get("/metrics", response_model=List[SystemMetricResponse])
+@router.get("/metrics", response_model=list[SystemMetricResponse])
 async def get_system_metrics(
     system_monitor: SystemMonitor = Depends(get_system_monitor)
 ):
     """获取系统指标"""
     try:
         metrics = system_monitor.get_all_metrics()
-        
+
         return [
             SystemMetricResponse(
                 id=metric.id,
@@ -118,10 +121,10 @@ async def get_system_metrics(
             )
             for metric in metrics
         ]
-        
+
     except Exception as e:
         logger.error(f"获取系统指标异常: {e}")
-        raise HTTPException(status_code=500, detail=f"获取系统指标失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"获取系统指标失败: {e!s}")
 
 
 @router.post("/metrics/update", response_model=MetricUpdateResponse)
@@ -136,7 +139,7 @@ async def update_metric(
             value=request.value,
             timestamp=request.timestamp
         )
-        
+
         metric = system_monitor.get_metric(request.name)
         if metric:
             return MetricUpdateResponse(
@@ -164,10 +167,10 @@ async def update_metric(
                 message="指标不存在",
                 metric=None
             )
-            
+
     except Exception as e:
         logger.error(f"更新系统指标异常: {e}")
-        raise HTTPException(status_code=500, detail=f"更新系统指标失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"更新系统指标失败: {e!s}")
 
 
 @router.get("/alerts", response_model=SystemAlertListResponse)
@@ -177,7 +180,7 @@ async def get_system_alerts(
     """获取系统告警"""
     try:
         alerts = system_monitor.get_active_alerts()
-        
+
         alert_responses = []
         for alert in alerts:
             alert_responses.append(SystemAlertResponse(
@@ -194,11 +197,11 @@ async def get_system_alerts(
                 duration_seconds=alert.get_duration(),
                 is_active=alert.is_active()
             ))
-        
+
         active_count = len([a for a in alerts if a.is_active()])
         critical_count = len([a for a in alerts if a.severity == MetricStatus.CRITICAL])
         warning_count = len([a for a in alerts if a.severity == MetricStatus.WARNING])
-        
+
         return SystemAlertListResponse(
             alerts=alert_responses,
             total=len(alerts),
@@ -206,10 +209,10 @@ async def get_system_alerts(
             critical_count=critical_count,
             warning_count=warning_count
         )
-        
+
     except Exception as e:
         logger.error(f"获取系统告警异常: {e}")
-        raise HTTPException(status_code=500, detail=f"获取系统告警失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"获取系统告警失败: {e!s}")
 
 
 @router.post("/alerts/acknowledge", response_model=SystemAlertActionResponse)
@@ -220,7 +223,7 @@ async def acknowledge_alert(
     """确认系统告警"""
     try:
         success = system_monitor.acknowledge_alert(request.alert_id)
-        
+
         if success:
             return SystemAlertActionResponse(
                 success=True,
@@ -231,10 +234,10 @@ async def acknowledge_alert(
                 success=False,
                 message="告警不存在或已处理"
             )
-            
+
     except Exception as e:
         logger.error(f"确认系统告警异常: {e}")
-        raise HTTPException(status_code=500, detail=f"确认系统告警失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"确认系统告警失败: {e!s}")
 
 
 @router.post("/alerts/resolve", response_model=SystemAlertActionResponse)
@@ -245,7 +248,7 @@ async def resolve_alert(
     """解决系统告警"""
     try:
         success = system_monitor.resolve_alert(request.alert_id)
-        
+
         if success:
             return SystemAlertActionResponse(
                 success=True,
@@ -256,20 +259,20 @@ async def resolve_alert(
                 success=False,
                 message="告警不存在或已处理"
             )
-            
+
     except Exception as e:
         logger.error(f"解决系统告警异常: {e}")
-        raise HTTPException(status_code=500, detail=f"解决系统告警失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"解决系统告警失败: {e!s}")
 
 
-@router.get("/rules", response_model=List[AlertRuleResponse])
+@router.get("/rules", response_model=list[AlertRuleResponse])
 async def get_alert_rules(
     system_monitor: SystemMonitor = Depends(get_system_monitor)
 ):
     """获取告警规则"""
     try:
         rules = system_monitor.get_all_alert_rules()
-        
+
         return [
             AlertRuleResponse(
                 id=rule.id,
@@ -299,10 +302,10 @@ async def get_alert_rules(
             )
             for rule in rules
         ]
-        
+
     except Exception as e:
         logger.error(f"获取告警规则异常: {e}")
-        raise HTTPException(status_code=500, detail=f"获取告警规则失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"获取告警规则失败: {e!s}")
 
 
 @router.post("/rules", response_model=AlertRuleResponse)
@@ -332,9 +335,9 @@ async def create_alert_rule(
             notification_channels=request.notification_channels,
             notification_template=request.notification_template
         )
-        
+
         system_monitor.add_alert_rule(rule)
-        
+
         return AlertRuleResponse(
             id=rule.id,
             name=rule.name,
@@ -361,10 +364,10 @@ async def create_alert_rule(
             trigger_count=rule.trigger_count,
             is_active=rule.is_active()
         )
-        
+
     except Exception as e:
         logger.error(f"创建告警规则异常: {e}")
-        raise HTTPException(status_code=500, detail=f"创建告警规则失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"创建告警规则失败: {e!s}")
 
 
 @router.get("/performance", response_model=PerformanceHistoryResponse)
@@ -375,7 +378,7 @@ async def get_performance_metrics(
     """获取性能指标历史"""
     try:
         metrics = system_monitor.get_performance_metrics(hours)
-        
+
         return PerformanceHistoryResponse(
             metrics=[
                 PerformanceMetricsResponse(
@@ -392,10 +395,10 @@ async def get_performance_metrics(
             total=len(metrics),
             time_range=f"最近{hours}小时"
         )
-        
+
     except Exception as e:
         logger.error(f"获取性能指标异常: {e}")
-        raise HTTPException(status_code=500, detail=f"获取性能指标失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"获取性能指标失败: {e!s}")
 
 
 @router.get("/status", response_model=SystemStatusResponse)
@@ -405,7 +408,7 @@ async def get_system_status(
     """获取系统状态"""
     try:
         status = system_monitor.get_system_status()
-        
+
         return SystemStatusResponse(
             status=status.status,
             uptime=status.uptime,
@@ -414,10 +417,10 @@ async def get_system_status(
             last_restart=status.last_restart,
             health_score=status.health_score
         )
-        
+
     except Exception as e:
         logger.error(f"获取系统状态异常: {e}")
-        raise HTTPException(status_code=500, detail=f"获取系统状态失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"获取系统状态失败: {e!s}")
 
 
 @router.get("/summary", response_model=SystemSummaryResponse)
@@ -427,7 +430,7 @@ async def get_system_summary(
     """获取系统摘要"""
     try:
         summary = system_monitor.get_system_summary()
-        
+
         return SystemSummaryResponse(
             system_status=SystemStatusResponse(
                 status=summary["system_status"]["status"],
@@ -442,10 +445,10 @@ async def get_system_summary(
             performance=summary["performance"],
             timestamp=datetime.fromisoformat(summary["timestamp"])
         )
-        
+
     except Exception as e:
         logger.error(f"获取系统摘要异常: {e}")
-        raise HTTPException(status_code=500, detail=f"获取系统摘要失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"获取系统摘要失败: {e!s}")
 
 
 @router.get("/dashboard", response_model=SystemDashboardResponse)
@@ -456,25 +459,25 @@ async def get_system_dashboard(
     try:
         # 获取系统状态
         status = system_monitor.get_system_status()
-        
+
         # 获取系统健康
         health = system_monitor.get_system_health()
-        
+
         # 获取活跃告警
         alerts = system_monitor.get_active_alerts()
-        
+
         # 获取性能趋势（最近1小时）
         performance_metrics = system_monitor.get_performance_metrics(1)
-        
+
         # 获取关键指标（按严重程度排序）
         all_metrics = system_monitor.get_all_metrics()
         top_metrics = sorted(all_metrics, key=lambda m: (
             m.is_critical(), m.is_warning(), m.value
         ), reverse=True)[:10]
-        
+
         # 获取告警规则
         alert_rules = system_monitor.get_all_alert_rules()
-        
+
         return SystemDashboardResponse(
             system_status=SystemStatusResponse(
                 status=status.status,
@@ -584,7 +587,7 @@ async def get_system_dashboard(
             ],
             last_updated=datetime.now()
         )
-        
+
     except Exception as e:
         logger.error(f"获取系统仪表板异常: {e}")
-        raise HTTPException(status_code=500, detail=f"获取系统仪表板失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"获取系统仪表板失败: {e!s}")

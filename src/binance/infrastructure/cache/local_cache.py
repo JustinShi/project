@@ -4,9 +4,10 @@ import json
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 
 from binance.infrastructure.logging.logger import get_logger
+
 
 logger = get_logger(__name__)
 
@@ -18,7 +19,7 @@ CACHE_TTL_HOURS = 24
 
 @dataclass
 class CachedItem:
-    data: Dict[str, Any]
+    data: dict[str, Any]
     cached_at: datetime
 
     @property
@@ -31,8 +32,8 @@ class LocalCache:
 
     def __init__(self) -> None:
         CACHE_DIR.mkdir(parents=True, exist_ok=True)
-        self._token_info: Dict[str, CachedItem] = {}
-        self._token_precision: Dict[str, CachedItem] = {}
+        self._token_info: dict[str, CachedItem] = {}
+        self._token_precision: dict[str, CachedItem] = {}
         self._load()
 
     def _load(self) -> None:
@@ -40,12 +41,12 @@ class LocalCache:
         self._token_info = self._load_file(TOKEN_INFO_FILE)
         self._token_precision = self._load_file(TOKEN_PRECISION_FILE)
 
-    def _load_file(self, path: Path) -> Dict[str, CachedItem]:
+    def _load_file(self, path: Path) -> dict[str, CachedItem]:
         if not path.exists():
             return {}
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
-            result: Dict[str, CachedItem] = {}
+            result: dict[str, CachedItem] = {}
             for key, value in data.items():
                 cached_at_text = value.get("cached_at")
                 if not cached_at_text:
@@ -61,7 +62,7 @@ class LocalCache:
             logger.error("local_cache_load_error", file=str(path), error=str(exc))
             return {}
 
-    def _save_file(self, path: Path, payload: Dict[str, CachedItem]) -> None:
+    def _save_file(self, path: Path, payload: dict[str, CachedItem]) -> None:
         try:
             serializable = {
                 key: {
@@ -74,7 +75,7 @@ class LocalCache:
         except Exception as exc:
             logger.error("local_cache_save_error", file=str(path), error=str(exc))
 
-    def get_token_info(self, symbol_short: str) -> Optional[Dict[str, Any]]:
+    def get_token_info(self, symbol_short: str) -> dict[str, Any] | None:
         symbol = symbol_short.upper()
         item = self._token_info.get(symbol)
         if not item:
@@ -86,19 +87,19 @@ class LocalCache:
             return None
         return item.data
 
-    def set_token_info(self, symbol_short: str, data: Dict[str, Any]) -> None:
+    def set_token_info(self, symbol_short: str, data: dict[str, Any]) -> None:
         symbol = symbol_short.upper()
         self._token_info[symbol] = CachedItem(data=data, cached_at=datetime.now())
         self._save_file(TOKEN_INFO_FILE, self._token_info)
 
-    def set_all_token_info(self, items: Dict[str, Dict[str, Any]]) -> None:
+    def set_all_token_info(self, items: dict[str, dict[str, Any]]) -> None:
         now = datetime.now()
         for symbol, data in items.items():
             symbol_upper = symbol.upper()
             self._token_info[symbol_upper] = CachedItem(data=data, cached_at=now)
         self._save_file(TOKEN_INFO_FILE, self._token_info)
 
-    def get_token_precision(self, symbol_short: str) -> Optional[Dict[str, Any]]:
+    def get_token_precision(self, symbol_short: str) -> dict[str, Any] | None:
         symbol = symbol_short.upper()
         item = self._token_precision.get(symbol)
         if not item:
@@ -110,12 +111,12 @@ class LocalCache:
             return None
         return item.data
 
-    def set_token_precision(self, symbol_short: str, data: Dict[str, Any]) -> None:
+    def set_token_precision(self, symbol_short: str, data: dict[str, Any]) -> None:
         symbol = symbol_short.upper()
         self._token_precision[symbol] = CachedItem(data=data, cached_at=datetime.now())
         self._save_file(TOKEN_PRECISION_FILE, self._token_precision)
 
-    def set_all_token_precision(self, items: Dict[str, Dict[str, Any]]) -> None:
+    def set_all_token_precision(self, items: dict[str, dict[str, Any]]) -> None:
         now = datetime.now()
         for symbol, data in items.items():
             symbol_upper = symbol.upper()

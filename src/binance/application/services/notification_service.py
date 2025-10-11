@@ -1,25 +1,24 @@
 """通知应用服务"""
 
 import logging
-from datetime import datetime
-from typing import Dict, Any, Optional, List
 from decimal import Decimal
+from typing import Any
 
-from binance.domain.entities import User
 from binance.domain.repositories import UserRepository
+
 
 logger = logging.getLogger(__name__)
 
 
 class NotificationService:
     """通知应用服务
-    
+
     负责发送各种通知，如暂停交易、余额不足等
     """
 
     def __init__(self, user_repository: UserRepository):
         """初始化通知服务
-        
+
         Args:
             user_repository: 用户仓储
         """
@@ -30,10 +29,10 @@ class NotificationService:
         symbol: str,
         volatility_percentage: Decimal,
         threshold: Decimal,
-        affected_users: List[int],
+        affected_users: list[int],
     ) -> None:
         """通知价格波动警报
-        
+
         Args:
             symbol: 代币符号
             volatility_percentage: 实际波动百分比
@@ -45,14 +44,14 @@ class NotificationService:
             f"波动率 {volatility_percentage:.2f}% 超过阈值 {threshold:.2f}%，"
             f"已暂停 {len(affected_users)} 个用户的交易"
         )
-        
+
         logger.warning(message, extra={
             "symbol": symbol,
             "volatility_percentage": float(volatility_percentage),
             "threshold": float(threshold),
             "affected_users": affected_users,
         })
-        
+
         # TODO: 实现具体的通知逻辑（邮件、短信、推送等）
         for user_id in affected_users:
             await self._send_user_notification(
@@ -75,7 +74,7 @@ class NotificationService:
         available_amount: Decimal,
     ) -> None:
         """通知余额不足
-        
+
         Args:
             user_id: 用户ID
             symbol: 代币符号
@@ -86,14 +85,14 @@ class NotificationService:
             f"用户 {user_id} 余额不足: "
             f"需要 {required_amount} USDT，可用 {available_amount} USDT"
         )
-        
+
         logger.warning(message, extra={
             "user_id": user_id,
             "symbol": symbol,
             "required_amount": float(required_amount),
             "available_amount": float(available_amount),
         })
-        
+
         await self._send_user_notification(
             user_id=user_id,
             type="insufficient_balance",
@@ -114,7 +113,7 @@ class NotificationService:
         timeout_seconds: int,
     ) -> None:
         """通知订单超时
-        
+
         Args:
             user_id: 用户ID
             symbol: 代币符号
@@ -125,14 +124,14 @@ class NotificationService:
             f"用户 {user_id} 订单超时: "
             f"代币 {symbol} 订单 {order_id} 在 {timeout_seconds} 秒后超时"
         )
-        
+
         logger.warning(message, extra={
             "user_id": user_id,
             "symbol": symbol,
             "order_id": order_id,
             "timeout_seconds": timeout_seconds,
         })
-        
+
         await self._send_user_notification(
             user_id=user_id,
             type="order_timeout",
@@ -148,10 +147,10 @@ class NotificationService:
     async def notify_websocket_disconnected(
         self,
         symbol: str,
-        affected_users: List[int],
+        affected_users: list[int],
     ) -> None:
         """通知WebSocket断开连接
-        
+
         Args:
             symbol: 代币符号
             affected_users: 受影响的用户ID列表
@@ -160,12 +159,12 @@ class NotificationService:
             f"WebSocket连接断开: {symbol}，"
             f"已暂停 {len(affected_users)} 个用户的交易"
         )
-        
+
         logger.error(message, extra={
             "symbol": symbol,
             "affected_users": affected_users,
         })
-        
+
         for user_id in affected_users:
             await self._send_user_notification(
                 user_id=user_id,
@@ -181,23 +180,23 @@ class NotificationService:
         self,
         user_id: int,
         reason: str,
-        details: Optional[Dict[str, Any]] = None,
+        details: dict[str, Any] | None = None,
     ) -> None:
         """通知交易暂停
-        
+
         Args:
             user_id: 用户ID
             reason: 暂停原因
             details: 详细信息
         """
         message = f"用户 {user_id} 交易暂停: {reason}"
-        
+
         logger.info(message, extra={
             "user_id": user_id,
             "reason": reason,
             "details": details,
         })
-        
+
         await self._send_user_notification(
             user_id=user_id,
             type="trading_paused",
@@ -215,18 +214,18 @@ class NotificationService:
         symbol: str,
     ) -> None:
         """通知交易恢复
-        
+
         Args:
             user_id: 用户ID
             symbol: 代币符号
         """
         message = f"用户 {user_id} 交易恢复: {symbol}"
-        
+
         logger.info(message, extra={
             "user_id": user_id,
             "symbol": symbol,
         })
-        
+
         await self._send_user_notification(
             user_id=user_id,
             type="trading_resumed",
@@ -243,10 +242,10 @@ class NotificationService:
         type: str,
         title: str,
         message: str,
-        data: Optional[Dict[str, Any]] = None,
+        data: dict[str, Any] | None = None,
     ) -> None:
         """发送用户通知
-        
+
         Args:
             user_id: 用户ID
             type: 通知类型
@@ -260,12 +259,12 @@ class NotificationService:
             if not user:
                 logger.error(f"用户不存在: {user_id}")
                 return
-            
+
             # TODO: 实现具体的通知发送逻辑
             # 这里可以集成邮件、短信、推送等服务
-            
+
             logger.info(f"通知已发送: 用户 {user_id}, 类型 {type}, 标题 {title}")
-            
+
         except Exception as e:
             logger.error(f"发送通知失败: {e}")
 
@@ -273,13 +272,13 @@ class NotificationService:
         self,
         user_id: int,
         limit: int = 50,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """获取用户通知历史
-        
+
         Args:
             user_id: 用户ID
             limit: 返回数量限制
-            
+
         Returns:
             通知历史列表
         """
@@ -293,11 +292,11 @@ class NotificationService:
         notification_id: str,
     ) -> bool:
         """标记通知为已读
-        
+
         Args:
             user_id: 用户ID
             notification_id: 通知ID
-            
+
         Returns:
             是否标记成功
         """

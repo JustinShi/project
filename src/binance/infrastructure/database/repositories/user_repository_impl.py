@@ -1,6 +1,5 @@
 """用户仓储实现"""
 
-from typing import Optional
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -31,19 +30,25 @@ class UserRepositoryImpl(UserRepository):
         Returns:
             User领域实体
         """
+        # 确保 headers 和 cookies 是字符串类型（处理可能的 bytes）
+        headers = model.headers
+        if isinstance(headers, bytes):
+            headers = headers.decode('utf-8')
+        
+        cookies = model.cookies
+        if isinstance(cookies, bytes):
+            cookies = cookies.decode('utf-8')
+        
         return User(
             id=model.id,
             name=model.name,
             email=model.email,
-            headers=model.headers,
-            cookies=model.cookies,
-            last_verified_at=model.last_verified_at,
+            headers=headers,
+            cookies=cookies,
             is_valid=model.is_valid,
-            created_at=model.created_at,
-            updated_at=model.updated_at,
         )
 
-    async def get_by_id(self, user_id: int) -> Optional[User]:
+    async def get_by_id(self, user_id: int) -> User | None:
         """根据ID获取用户"""
         result = await self._session.execute(
             select(models.User).where(models.User.id == user_id)
@@ -51,7 +56,7 @@ class UserRepositoryImpl(UserRepository):
         user_model = result.scalar_one_or_none()
         return self._to_entity(user_model) if user_model else None
 
-    async def get_by_name(self, name: str) -> Optional[User]:
+    async def get_by_name(self, name: str) -> User | None:
         """根据用户名获取用户"""
         result = await self._session.execute(
             select(models.User).where(models.User.name == name)
@@ -78,14 +83,13 @@ class UserRepositoryImpl(UserRepository):
             select(models.User).where(models.User.id == user.id)
         )
         user_model = result.scalar_one()
-        
+
         user_model.name = user.name
         user_model.email = user.email
         user_model.headers = user.headers
         user_model.cookies = user.cookies
-        user_model.last_verified_at = user.last_verified_at
         user_model.is_valid = user.is_valid
-        
+
         await self._session.flush()
         return self._to_entity(user_model)
 

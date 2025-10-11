@@ -1,6 +1,6 @@
 """FastAPI依赖注入"""
 
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
 
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
