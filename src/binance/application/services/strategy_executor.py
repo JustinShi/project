@@ -29,6 +29,11 @@ from binance.infrastructure.logging.logger import get_logger
 logger = get_logger(__name__)
 
 
+class AuthenticationError(Exception):
+    """认证失败异常"""
+    pass
+
+
 class StrategyExecutor:
     """交易策略执行器"""
     
@@ -80,7 +85,17 @@ class StrategyExecutor:
             logger.warning("策略已在运行", strategy_id=strategy_id)
             return False
         
-        task = asyncio.create_task(self._run_strategy(strategy))
+        # 创建包装任务，确保完成后自动清理
+        async def _wrapped_strategy():
+            try:
+                await self._run_strategy(strategy)
+            finally:
+                # 任务完成后自动从运行列表中移除
+                if strategy_id in self._running_tasks:
+                    del self._running_tasks[strategy_id]
+                logger.info("策略任务已清理", strategy_id=strategy_id)
+        
+        task = asyncio.create_task(_wrapped_strategy())
         self._running_tasks[strategy_id] = task
         logger.info("策略已启动", strategy_id=strategy_id)
         return True
@@ -222,9 +237,18 @@ class StrategyExecutor:
                 )
                 
                 # 执行 N 次交易
-                await self._execute_batch_trades(
+                early_stop = await self._execute_batch_trades(
                     user_id, strategy, loop_count, headers, cookies
                 )
+                
+                # 如果批次中提前达标，直接退出
+                if early_stop:
+                    logger.info(
+                        "批次中已达标，终止策略",
+                        user_id=user_id,
+                        strategy_id=strategy.strategy_id,
+                    )
+                    break
                 
                 # 批次完成，重新查询（循环回到开头）
                 logger.info(
@@ -232,7 +256,20 @@ class StrategyExecutor:
                     user_id=user_id,
                     strategy_id=strategy.strategy_id,
                 )
-                
+        
+        except AuthenticationError as e:
+            # 认证失败，记录并优雅退出
+            logger.error(
+                "🚨 用户认证失败，停止交易",
+                user_id=user_id,
+                strategy_id=strategy.strategy_id,
+                error=str(e),
+            )
+            logger.error(
+                "⚠️  请运行以下命令更新凭证：",
+                command="uv run python scripts/update_user_credentials_quick.py",
+            )
+            
         finally:
             # 清理 WebSocket 连接
             await self._cleanup_websocket_connection(user_id)
@@ -264,19 +301,27 @@ class StrategyExecutor:
         try:
             async with BinanceClient(headers=headers, cookies=cookies) as client:
                 volume_data = await client.get_user_volume()
+                token_info = await client.get_token_info()
                 
                 # 从 tradeVolumeInfoList 中查找目标代币
                 volume_list = volume_data.get("tradeVolumeInfoList", [])
                 for token_vol in volume_list:
                     if token_vol.get("tokenName") == token_symbol:
-                        volume = Decimal(str(token_vol.get("volume", 0)))
+                        displayed_volume = Decimal(str(token_vol.get("volume", 0)))
+                        
+                        # 获取 mulPoint 并计算真实交易量
+                        mul_point = await self._get_mul_point(token_info, token_symbol)
+                        real_volume = displayed_volume / Decimal(str(mul_point))
+                        
                         logger.info(
                             "查询到用户代币交易量",
                             user_id=user_id,
                             token=token_symbol,
-                            volume=str(volume),
+                            displayed_volume=str(displayed_volume),
+                            mul_point=mul_point,
+                            real_volume=str(real_volume),
                         )
-                        return volume
+                        return real_volume
                 
                 # 未找到该代币的交易量，返回 0
                 logger.info(
@@ -356,7 +401,7 @@ class StrategyExecutor:
         loop_count: int,
         headers: Dict[str, str],
         cookies: str,
-    ) -> None:
+    ) -> bool:
         """执行批次交易
         
         Args:
@@ -365,6 +410,9 @@ class StrategyExecutor:
             loop_count: 循环次数
             headers: 请求头
             cookies: Cookies
+            
+        Returns:
+            是否提前达标（True=达标提前终止，False=正常完成批次）
         """
         for i in range(loop_count):
             # 检查停止标志
@@ -397,6 +445,24 @@ class StrategyExecutor:
                         loop=f"{i + 1}/{loop_count}",
                         trade_volume=str(trade_volume),
                     )
+                    
+                    # 每笔交易成功后，检查是否已达标
+                    current_volume = await self._query_user_current_volume(
+                        user_id, strategy.target_token, headers, cookies
+                    )
+                    
+                    if current_volume >= strategy.target_volume:
+                        logger.info(
+                            "批次交易中达成目标，提前终止",
+                            user_id=user_id,
+                            strategy_id=strategy.strategy_id,
+                            current_volume=str(current_volume),
+                            target_volume=str(strategy.target_volume),
+                            completed_loops=i + 1,
+                            total_loops=loop_count,
+                        )
+                        return True  # 提前达标
+                    
                 else:
                     logger.warning(
                         "批次交易失败",
@@ -406,7 +472,7 @@ class StrategyExecutor:
                     # 失败后等待重试间隔
                     for _ in range(strategy.trade_interval_seconds * 20):
                         if self._stop_flags.get(strategy.strategy_id, False):
-                            return
+                            return False
                         await asyncio.sleep(0.1)
                     continue
                 
@@ -421,7 +487,7 @@ class StrategyExecutor:
                 # 异常后等待重试间隔
                 for _ in range(strategy.trade_interval_seconds * 20):
                     if self._stop_flags.get(strategy.strategy_id, False):
-                        return
+                        return False
                     await asyncio.sleep(0.1)
                 continue
             
@@ -430,6 +496,8 @@ class StrategyExecutor:
                 if self._stop_flags.get(strategy.strategy_id, False):
                     break
                 await asyncio.sleep(0.1)
+        
+        return False  # 批次正常完成，未提前达标
     
     async def _execute_single_trade(
         self,
@@ -510,8 +578,9 @@ class StrategyExecutor:
             )
             
             if success and order_info:
-                working_order_id = order_info.get("workingOrderId")
-                pending_order_id = order_info.get("pendingOrderId")
+                # 统一转换为字符串，与 WebSocket 推送的 order_id 类型一致
+                working_order_id = str(order_info.get("workingOrderId"))
+                pending_order_id = str(order_info.get("pendingOrderId"))
                 
                 logger.info(
                     "OTO订单下单成功",
@@ -570,13 +639,27 @@ class StrategyExecutor:
                 
                 return True, real_trade_volume
             else:
-                logger.error(
-                    "OTO订单下单失败",
-                    user_id=user_id,
-                    strategy_id=strategy.strategy_id,
-                    message=message,
-                )
-                return False, Decimal("0")
+                # 检查是否是认证失败错误
+                is_auth_error = self._is_authentication_error(message)
+                
+                if is_auth_error:
+                    logger.error(
+                        "认证失败：用户凭证已过期",
+                        user_id=user_id,
+                        strategy_id=strategy.strategy_id,
+                        message=message,
+                        action="停止当前用户交易，请更新凭证",
+                    )
+                    # 抛出特殊异常，让上层捕获并优雅处理
+                    raise AuthenticationError(f"用户 {user_id} 认证失败，需要更新凭证")
+                else:
+                    logger.error(
+                        "OTO订单下单失败",
+                        user_id=user_id,
+                        strategy_id=strategy.strategy_id,
+                        message=message,
+                    )
+                    return False, Decimal("0")
     
     async def _fetch_last_price(
         self, 
@@ -783,6 +866,9 @@ class StrategyExecutor:
         if not order_id:
             return
         
+        # 确保 order_id 是字符串
+        order_id = str(order_id)
+        
         # 更新订单状态
         self._order_status[order_id] = order_data
         
@@ -817,12 +903,15 @@ class StrategyExecutor:
         """等待订单完全成交
         
         Args:
-            order_id: 订单ID
+            order_id: 订单ID（字符串）
             timeout: 超时时间（秒）
             
         Returns:
             是否成交
         """
+        # 确保 order_id 是字符串
+        order_id = str(order_id)
+        
         # 创建事件
         if order_id not in self._order_events:
             self._order_events[order_id] = asyncio.Event()
@@ -852,5 +941,31 @@ class StrategyExecutor:
             # 清理事件
             if order_id in self._order_events:
                 del self._order_events[order_id]
+    
+    def _is_authentication_error(self, error_message: Optional[str]) -> bool:
+        """检测是否是认证失败错误
+        
+        Args:
+            error_message: 错误消息
+            
+        Returns:
+            是否是认证失败
+        """
+        if not error_message:
+            return False
+        
+        # 常见的认证失败错误消息
+        auth_error_keywords = [
+            "补充认证失败",
+            "您必须完成此认证才能进入下一步",
+            "authentication failed",
+            "unauthorized",
+            "invalid credentials",
+            "token expired",
+            "session expired",
+        ]
+        
+        error_message_lower = error_message.lower()
+        return any(keyword.lower() in error_message_lower for keyword in auth_error_keywords)
 
 

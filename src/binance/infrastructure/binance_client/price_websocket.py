@@ -1,7 +1,6 @@
 """价格WebSocket连接器"""
 
 import asyncio
-import logging
 from datetime import datetime
 from decimal import Decimal
 from typing import Callable, Optional, Dict, Any
@@ -9,8 +8,9 @@ from typing import Callable, Optional, Dict, Any
 from binance.domain.entities.price_data import PriceData
 from binance.domain.value_objects.price import Price
 from binance.infrastructure.binance_client.websocket_client import BinanceWebSocketClient
+from binance.infrastructure.logging.logger import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class PriceWebSocketConnector:

@@ -177,36 +177,30 @@ class ListenKeyManager:
             return False
     
     async def delete_listen_key(self) -> bool:
-        """删除ListenKey"""
+        """删除ListenKey
+        
+        注意: 币安 Alpha API 没有标准的删除 ListenKey 接口。
+        ListenKey 会在 60 分钟后自动过期，因此这里只做清理本地状态。
+        """
         if not self._listen_key:
             return True
         
         try:
-            await self._ensure_client()
+            logger.info(f"清理ListenKey（自动过期）: {self._listen_key[:20]}...")
             
-            logger.info(f"删除ListenKey: {self._listen_key}")
+            # 币安 Alpha API 没有 DELETE ListenKey 端点
+            # ListenKey 会在有效期（60分钟）后自动过期
+            # 这里只需要清理本地状态
             
-            response = await self._client.delete(
-                f"{self.base_url}/bapi/defi/v1/private/alpha-trade/userDataStream",
-                params={"listenKey": self._listen_key}
-            )
+            # 清理本地状态
+            self._listen_key = None
+            self._key_expires_at = None
             
-            if response.status_code == 200:
-                result = response.json()
-                if result.get("success", False):
-                    logger.info("ListenKey删除成功")
-                    return True
-                else:
-                    error_msg = result.get("message", "删除ListenKey失败")
-                    logger.error(f"ListenKey删除失败: {error_msg}")
-                    return False
-            else:
-                error_msg = f"HTTP错误: {response.status_code}"
-                logger.error(f"ListenKey删除请求失败: {error_msg}")
-                return False
+            logger.info("ListenKey 本地状态已清理（将自动过期）")
+            return True
                 
         except Exception as e:
-            logger.error(f"删除ListenKey异常: {e}")
+            logger.error(f"清理ListenKey异常: {e}")
             return False
     
     def get_current_listen_key(self) -> Optional[str]:

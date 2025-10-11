@@ -2,13 +2,13 @@
 
 import asyncio
 import json
-import logging
 from typing import Callable, Optional, Dict, Any
 from datetime import datetime
 import websockets
 from websockets.exceptions import ConnectionClosed, WebSocketException
+from binance.infrastructure.logging.logger import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class BinanceWebSocketClient:

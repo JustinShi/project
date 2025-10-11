@@ -46,8 +46,8 @@ class Settings(BaseSettings):
 
     # 日志配置
     log_level: str = Field(default="INFO", description="日志级别")
-    log_format: str = Field(default="json", description="日志格式（json/console）")
-    log_file: str = Field(default="logs/app.log", description="日志文件路径")
+    log_format: str = Field(default="console", description="日志格式（json/console）")
+    log_file: str = Field(default="logs/trading.log", description="日志文件路径")
 
     # WebSocket配置
     ws_reconnect_delay: int = Field(default=5, description="WebSocket重连延迟（秒）")

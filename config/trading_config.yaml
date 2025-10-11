@@ -38,7 +38,7 @@ strategies:
     enabled: true
     target_token: AOP
     target_chain: BSC
-    target_volume: 5000
+    target_volume: 4000
     #single_trade_amount_usdt: 10               # 覆盖全局默认值
     #trade_interval_seconds: 2                  # 覆盖全局默认值
     user_ids: [1]
