@@ -54,7 +54,7 @@ def get_system_monitor() -> SystemMonitor:
 
 @router.get("/health", response_model=SystemHealthResponse)
 async def get_system_health(
-    system_monitor: SystemMonitor = Depends(get_system_monitor)
+    system_monitor: SystemMonitor = Depends(get_system_monitor),
 ):
     """获取系统健康状态"""
     try:
@@ -84,10 +84,10 @@ async def get_system_health(
                     timestamp=metric.timestamp,
                     is_healthy=metric.is_healthy(),
                     is_warning=metric.is_warning(),
-                    is_critical=metric.is_critical()
+                    is_critical=metric.is_critical(),
                 )
                 for metric in health.metrics
-            ]
+            ],
         )
 
     except Exception as e:
@@ -97,7 +97,7 @@ async def get_system_health(
 
 @router.get("/metrics", response_model=list[SystemMetricResponse])
 async def get_system_metrics(
-    system_monitor: SystemMonitor = Depends(get_system_monitor)
+    system_monitor: SystemMonitor = Depends(get_system_monitor),
 ):
     """获取系统指标"""
     try:
@@ -117,7 +117,7 @@ async def get_system_metrics(
                 timestamp=metric.timestamp,
                 is_healthy=metric.is_healthy(),
                 is_warning=metric.is_warning(),
-                is_critical=metric.is_critical()
+                is_critical=metric.is_critical(),
             )
             for metric in metrics
         ]
@@ -130,14 +130,12 @@ async def get_system_metrics(
 @router.post("/metrics/update", response_model=MetricUpdateResponse)
 async def update_metric(
     request: MetricUpdateRequest,
-    system_monitor: SystemMonitor = Depends(get_system_monitor)
+    system_monitor: SystemMonitor = Depends(get_system_monitor),
 ):
     """更新系统指标"""
     try:
         system_monitor.update_metric(
-            name=request.name,
-            value=request.value,
-            timestamp=request.timestamp
+            name=request.name, value=request.value, timestamp=request.timestamp
         )
 
         metric = system_monitor.get_metric(request.name)
@@ -158,14 +156,12 @@ async def update_metric(
                     timestamp=metric.timestamp,
                     is_healthy=metric.is_healthy(),
                     is_warning=metric.is_warning(),
-                    is_critical=metric.is_critical()
-                )
+                    is_critical=metric.is_critical(),
+                ),
             )
         else:
             return MetricUpdateResponse(
-                success=False,
-                message="指标不存在",
-                metric=None
+                success=False, message="指标不存在", metric=None
             )
 
     except Exception as e:
@@ -175,7 +171,7 @@ async def update_metric(
 
 @router.get("/alerts", response_model=SystemAlertListResponse)
 async def get_system_alerts(
-    system_monitor: SystemMonitor = Depends(get_system_monitor)
+    system_monitor: SystemMonitor = Depends(get_system_monitor),
 ):
     """获取系统告警"""
     try:
@@ -183,20 +179,22 @@ async def get_system_alerts(
 
         alert_responses = []
         for alert in alerts:
-            alert_responses.append(SystemAlertResponse(
-                id=alert.id,
-                rule_id=alert.rule_id,
-                metric_name=alert.metric_name,
-                metric_value=alert.metric_value,
-                severity=alert.severity.value,
-                message=alert.message,
-                triggered_at=alert.triggered_at,
-                acknowledged_at=alert.acknowledged_at,
-                resolved_at=alert.resolved_at,
-                status=alert.status,
-                duration_seconds=alert.get_duration(),
-                is_active=alert.is_active()
-            ))
+            alert_responses.append(
+                SystemAlertResponse(
+                    id=alert.id,
+                    rule_id=alert.rule_id,
+                    metric_name=alert.metric_name,
+                    metric_value=alert.metric_value,
+                    severity=alert.severity.value,
+                    message=alert.message,
+                    triggered_at=alert.triggered_at,
+                    acknowledged_at=alert.acknowledged_at,
+                    resolved_at=alert.resolved_at,
+                    status=alert.status,
+                    duration_seconds=alert.get_duration(),
+                    is_active=alert.is_active(),
+                )
+            )
 
         active_count = len([a for a in alerts if a.is_active()])
         critical_count = len([a for a in alerts if a.severity == MetricStatus.CRITICAL])
@@ -207,7 +205,7 @@ async def get_system_alerts(
             total=len(alerts),
             active_count=active_count,
             critical_count=critical_count,
-            warning_count=warning_count
+            warning_count=warning_count,
         )
 
     except Exception as e:
@@ -218,21 +216,17 @@ async def get_system_alerts(
 @router.post("/alerts/acknowledge", response_model=SystemAlertActionResponse)
 async def acknowledge_alert(
     request: SystemAlertActionRequest,
-    system_monitor: SystemMonitor = Depends(get_system_monitor)
+    system_monitor: SystemMonitor = Depends(get_system_monitor),
 ):
     """确认系统告警"""
     try:
         success = system_monitor.acknowledge_alert(request.alert_id)
 
         if success:
-            return SystemAlertActionResponse(
-                success=True,
-                message="告警已确认"
-            )
+            return SystemAlertActionResponse(success=True, message="告警已确认")
         else:
             return SystemAlertActionResponse(
-                success=False,
-                message="告警不存在或已处理"
+                success=False, message="告警不存在或已处理"
             )
 
     except Exception as e:
@@ -243,21 +237,17 @@ async def acknowledge_alert(
 @router.post("/alerts/resolve", response_model=SystemAlertActionResponse)
 async def resolve_alert(
     request: SystemAlertActionRequest,
-    system_monitor: SystemMonitor = Depends(get_system_monitor)
+    system_monitor: SystemMonitor = Depends(get_system_monitor),
 ):
     """解决系统告警"""
     try:
         success = system_monitor.resolve_alert(request.alert_id)
 
         if success:
-            return SystemAlertActionResponse(
-                success=True,
-                message="告警已解决"
-            )
+            return SystemAlertActionResponse(success=True, message="告警已解决")
         else:
             return SystemAlertActionResponse(
-                success=False,
-                message="告警不存在或已处理"
+                success=False, message="告警不存在或已处理"
             )
 
     except Exception as e:
@@ -266,9 +256,7 @@ async def resolve_alert(
 
 
 @router.get("/rules", response_model=list[AlertRuleResponse])
-async def get_alert_rules(
-    system_monitor: SystemMonitor = Depends(get_system_monitor)
-):
+async def get_alert_rules(system_monitor: SystemMonitor = Depends(get_system_monitor)):
     """获取告警规则"""
     try:
         rules = system_monitor.get_all_alert_rules()
@@ -298,7 +286,7 @@ async def get_alert_rules(
                 updated_at=rule.updated_at,
                 last_triggered=rule.last_triggered,
                 trigger_count=rule.trigger_count,
-                is_active=rule.is_active()
+                is_active=rule.is_active(),
             )
             for rule in rules
         ]
@@ -311,7 +299,7 @@ async def get_alert_rules(
 @router.post("/rules", response_model=AlertRuleResponse)
 async def create_alert_rule(
     request: AlertRuleCreateRequest,
-    system_monitor: SystemMonitor = Depends(get_system_monitor)
+    system_monitor: SystemMonitor = Depends(get_system_monitor),
 ):
     """创建告警规则"""
     try:
@@ -333,7 +321,7 @@ async def create_alert_rule(
             severity=MetricStatus(request.severity),
             enabled=request.enabled,
             notification_channels=request.notification_channels,
-            notification_template=request.notification_template
+            notification_template=request.notification_template,
         )
 
         system_monitor.add_alert_rule(rule)
@@ -362,7 +350,7 @@ async def create_alert_rule(
             updated_at=rule.updated_at,
             last_triggered=rule.last_triggered,
             trigger_count=rule.trigger_count,
-            is_active=rule.is_active()
+            is_active=rule.is_active(),
         )
 
     except Exception as e:
@@ -373,7 +361,7 @@ async def create_alert_rule(
 @router.get("/performance", response_model=PerformanceHistoryResponse)
 async def get_performance_metrics(
     hours: int = Query(1, description="时间范围（小时）"),
-    system_monitor: SystemMonitor = Depends(get_system_monitor)
+    system_monitor: SystemMonitor = Depends(get_system_monitor),
 ):
     """获取性能指标历史"""
     try:
@@ -388,12 +376,12 @@ async def get_performance_metrics(
                     websocket=perf.websocket,
                     system=perf.system,
                     business=perf.business,
-                    timestamp=perf.timestamp
+                    timestamp=perf.timestamp,
                 )
                 for perf in metrics
             ],
             total=len(metrics),
-            time_range=f"最近{hours}小时"
+            time_range=f"最近{hours}小时",
         )
 
     except Exception as e:
@@ -403,7 +391,7 @@ async def get_performance_metrics(
 
 @router.get("/status", response_model=SystemStatusResponse)
 async def get_system_status(
-    system_monitor: SystemMonitor = Depends(get_system_monitor)
+    system_monitor: SystemMonitor = Depends(get_system_monitor),
 ):
     """获取系统状态"""
     try:
@@ -415,7 +403,7 @@ async def get_system_status(
             version=status.version,
             environment=status.environment,
             last_restart=status.last_restart,
-            health_score=status.health_score
+            health_score=status.health_score,
         )
 
     except Exception as e:
@@ -425,7 +413,7 @@ async def get_system_status(
 
 @router.get("/summary", response_model=SystemSummaryResponse)
 async def get_system_summary(
-    system_monitor: SystemMonitor = Depends(get_system_monitor)
+    system_monitor: SystemMonitor = Depends(get_system_monitor),
 ):
     """获取系统摘要"""
     try:
@@ -437,13 +425,15 @@ async def get_system_summary(
                 uptime=summary["system_status"]["uptime"],
                 version=summary["system_status"]["version"],
                 environment=summary["system_status"]["environment"],
-                last_restart=datetime.fromisoformat(summary["system_status"]["last_restart"]),
-                health_score=summary["system_status"]["health_score"]
+                last_restart=datetime.fromisoformat(
+                    summary["system_status"]["last_restart"]
+                ),
+                health_score=summary["system_status"]["health_score"],
             ),
             health=SystemHealthResponse(**summary["health"]),
             alerts=summary["alerts"],
             performance=summary["performance"],
-            timestamp=datetime.fromisoformat(summary["timestamp"])
+            timestamp=datetime.fromisoformat(summary["timestamp"]),
         )
 
     except Exception as e:
@@ -453,7 +443,7 @@ async def get_system_summary(
 
 @router.get("/dashboard", response_model=SystemDashboardResponse)
 async def get_system_dashboard(
-    system_monitor: SystemMonitor = Depends(get_system_monitor)
+    system_monitor: SystemMonitor = Depends(get_system_monitor),
 ):
     """获取系统仪表板"""
     try:
@@ -471,9 +461,11 @@ async def get_system_dashboard(
 
         # 获取关键指标（按严重程度排序）
         all_metrics = system_monitor.get_all_metrics()
-        top_metrics = sorted(all_metrics, key=lambda m: (
-            m.is_critical(), m.is_warning(), m.value
-        ), reverse=True)[:10]
+        top_metrics = sorted(
+            all_metrics,
+            key=lambda m: (m.is_critical(), m.is_warning(), m.value),
+            reverse=True,
+        )[:10]
 
         # 获取告警规则
         alert_rules = system_monitor.get_all_alert_rules()
@@ -485,7 +477,7 @@ async def get_system_dashboard(
                 version=status.version,
                 environment=status.environment,
                 last_restart=status.last_restart,
-                health_score=status.health_score
+                health_score=status.health_score,
             ),
             health=SystemHealthResponse(
                 overall_status=health.overall_status.value,
@@ -511,10 +503,10 @@ async def get_system_dashboard(
                         timestamp=metric.timestamp,
                         is_healthy=metric.is_healthy(),
                         is_warning=metric.is_warning(),
-                        is_critical=metric.is_critical()
+                        is_critical=metric.is_critical(),
                     )
                     for metric in health.metrics
-                ]
+                ],
             ),
             active_alerts=[
                 SystemAlertResponse(
@@ -529,14 +521,16 @@ async def get_system_dashboard(
                     resolved_at=alert.resolved_at,
                     status=alert.status,
                     duration_seconds=alert.get_duration(),
-                    is_active=alert.is_active()
+                    is_active=alert.is_active(),
                 )
                 for alert in alerts
             ],
             performance_trends={
-                "api_response_time": [float(m.api_response_time_avg) for m in performance_metrics],
+                "api_response_time": [
+                    float(m.api_response_time_avg) for m in performance_metrics
+                ],
                 "cpu_usage": [float(m.cpu_usage) for m in performance_metrics],
-                "memory_usage": [float(m.memory_usage) for m in performance_metrics]
+                "memory_usage": [float(m.memory_usage) for m in performance_metrics],
             },
             top_metrics=[
                 SystemMetricResponse(
@@ -552,7 +546,7 @@ async def get_system_dashboard(
                     timestamp=metric.timestamp,
                     is_healthy=metric.is_healthy(),
                     is_warning=metric.is_warning(),
-                    is_critical=metric.is_critical()
+                    is_critical=metric.is_critical(),
                 )
                 for metric in top_metrics
             ],
@@ -581,11 +575,11 @@ async def get_system_dashboard(
                     updated_at=rule.updated_at,
                     last_triggered=rule.last_triggered,
                     trigger_count=rule.trigger_count,
-                    is_active=rule.is_active()
+                    is_active=rule.is_active(),
                 )
                 for rule in alert_rules
             ],
-            last_updated=datetime.now()
+            last_updated=datetime.now(),
         )
 
     except Exception as e:

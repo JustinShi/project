@@ -162,9 +162,13 @@ class BinanceWebSocketClient:
             return False
 
         self._reconnect_attempts += 1
-        wait_time = min(self._reconnect_interval * (2 ** (self._reconnect_attempts - 1)), 60)
+        wait_time = min(
+            self._reconnect_interval * (2 ** (self._reconnect_attempts - 1)), 60
+        )
 
-        logger.info(f"等待 {wait_time} 秒后重连 (尝试 {self._reconnect_attempts}/{self._max_reconnect_attempts})")
+        logger.info(
+            f"等待 {wait_time} 秒后重连 (尝试 {self._reconnect_attempts}/{self._max_reconnect_attempts})"
+        )
         await asyncio.sleep(wait_time)
 
         try:

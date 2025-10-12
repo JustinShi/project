@@ -14,9 +14,7 @@ class PriceCalculator:
 
     @staticmethod
     def calculate_buy_price(
-        current_price: Price,
-        offset_value: Decimal,
-        offset_mode: PriceOffsetMode
+        current_price: Price, offset_value: Decimal, offset_mode: PriceOffsetMode
     ) -> Price:
         """计算买入价格（高于当前价，尽快成交）
 
@@ -43,9 +41,7 @@ class PriceCalculator:
 
     @staticmethod
     def calculate_sell_price(
-        current_price: Price,
-        offset_value: Decimal,
-        offset_mode: PriceOffsetMode
+        current_price: Price, offset_value: Decimal, offset_mode: PriceOffsetMode
     ) -> Price:
         """计算卖出价格（低于当前价，尽快成交）
 
@@ -65,7 +61,9 @@ class PriceCalculator:
 
         if offset_mode == PriceOffsetMode.PERCENTAGE:
             # 百分比模式：卖出价 = 当前价 * (1 - offset%) - 低价卖，尽快成交
-            return current_price.apply_percentage_offset(offset_value, is_increase=False)
+            return current_price.apply_percentage_offset(
+                offset_value, is_increase=False
+            )
 
         else:
             raise ValueError(f"仅支持百分比偏移模式: {offset_mode}")
@@ -75,7 +73,7 @@ class PriceCalculator:
         current_price: Price,
         buy_offset: Decimal,
         sell_offset: Decimal,
-        offset_mode: PriceOffsetMode
+        offset_mode: PriceOffsetMode,
     ) -> tuple[Price, Price]:
         """计算OTO订单的买卖价格（高价买，低价卖，尽快成交）
 
@@ -99,8 +97,7 @@ class PriceCalculator:
 
     @staticmethod
     def calculate_price_change_percentage(
-        old_price: Price,
-        new_price: Price
+        old_price: Price, new_price: Price
     ) -> Decimal:
         """计算价格变化百分比
 
@@ -118,4 +115,3 @@ class PriceCalculator:
         percentage = (change / old_price.value) * Decimal("100")
 
         return percentage
-

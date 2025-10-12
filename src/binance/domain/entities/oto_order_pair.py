@@ -90,7 +90,6 @@ class OTOOrderPair:
         """是否同时有买卖单"""
         return self.buy_order_id is not None and self.sell_order_id is not None
 
-
     def __str__(self) -> str:
         return (
             f"OTOOrderPair(id={self.id}, user_id={self.user_id}, "

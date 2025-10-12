@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 
 class RiskProfileResponse(BaseModel):
     """风险配置响应"""
+
     id: int = Field(..., description="风险配置ID")
     user_id: int = Field(..., description="用户ID")
     risk_level: str = Field(..., description="风险等级")
@@ -32,14 +33,19 @@ class RiskProfileResponse(BaseModel):
 
 class RiskProfileCreateRequest(BaseModel):
     """创建风险配置请求"""
+
     risk_level: str = Field(..., description="风险等级", example="MEDIUM")
     max_price_volatility: Decimal | None = Field(None, description="最大价格波动百分比")
-    volatility_window_minutes: int | None = Field(None, description="波动计算窗口（分钟）")
+    volatility_window_minutes: int | None = Field(
+        None, description="波动计算窗口（分钟）"
+    )
     min_balance_ratio: Decimal | None = Field(None, description="最小余额比例")
     max_position_ratio: Decimal | None = Field(None, description="最大仓位比例")
     max_orders_per_hour: int | None = Field(None, description="每小时最大订单数")
     max_orders_per_day: int | None = Field(None, description="每天最大订单数")
-    max_single_order_amount: Decimal | None = Field(None, description="单笔订单最大金额")
+    max_single_order_amount: Decimal | None = Field(
+        None, description="单笔订单最大金额"
+    )
     max_daily_volume: Decimal | None = Field(None, description="每日最大交易量")
     trading_hours_start: int | None = Field(None, description="交易开始时间")
     trading_hours_end: int | None = Field(None, description="交易结束时间")
@@ -50,14 +56,19 @@ class RiskProfileCreateRequest(BaseModel):
 
 class RiskProfileUpdateRequest(BaseModel):
     """更新风险配置请求"""
+
     risk_level: str | None = Field(None, description="风险等级")
     max_price_volatility: Decimal | None = Field(None, description="最大价格波动百分比")
-    volatility_window_minutes: int | None = Field(None, description="波动计算窗口（分钟）")
+    volatility_window_minutes: int | None = Field(
+        None, description="波动计算窗口（分钟）"
+    )
     min_balance_ratio: Decimal | None = Field(None, description="最小余额比例")
     max_position_ratio: Decimal | None = Field(None, description="最大仓位比例")
     max_orders_per_hour: int | None = Field(None, description="每小时最大订单数")
     max_orders_per_day: int | None = Field(None, description="每天最大订单数")
-    max_single_order_amount: Decimal | None = Field(None, description="单笔订单最大金额")
+    max_single_order_amount: Decimal | None = Field(
+        None, description="单笔订单最大金额"
+    )
     max_daily_volume: Decimal | None = Field(None, description="每日最大交易量")
     trading_hours_start: int | None = Field(None, description="交易开始时间")
     trading_hours_end: int | None = Field(None, description="交易结束时间")
@@ -69,6 +80,7 @@ class RiskProfileUpdateRequest(BaseModel):
 
 class RiskAlertResponse(BaseModel):
     """风险警报响应"""
+
     id: int = Field(..., description="警报ID")
     user_id: int = Field(..., description="用户ID")
     title: str = Field(..., description="警报标题")
@@ -88,6 +100,7 @@ class RiskAlertResponse(BaseModel):
 
 class RiskAlertListResponse(BaseModel):
     """风险警报列表响应"""
+
     alerts: list[RiskAlertResponse] = Field(..., description="警报列表")
     total: int = Field(..., description="总数量")
     active_count: int = Field(..., description="活跃警报数量")
@@ -96,17 +109,20 @@ class RiskAlertListResponse(BaseModel):
 
 class RiskAlertActionRequest(BaseModel):
     """风险警报操作请求"""
+
     alert_id: int = Field(..., description="警报ID")
 
 
 class RiskAlertActionResponse(BaseModel):
     """风险警报操作响应"""
+
     success: bool = Field(..., description="是否成功")
     message: str = Field(..., description="消息")
 
 
 class RiskAssessmentRequest(BaseModel):
     """风险评估请求"""
+
     symbol: str = Field(..., description="交易对符号", example="kogeusdt")
     order_amount: Decimal = Field(..., description="订单金额", example=1000.0)
     current_price: Decimal = Field(..., description="当前价格", example=48.0)
@@ -114,6 +130,7 @@ class RiskAssessmentRequest(BaseModel):
 
 class RiskAssessmentResponse(BaseModel):
     """风险评估响应"""
+
     approved: bool = Field(..., description="是否批准")
     message: str = Field(..., description="评估消息")
     risk_level: str = Field(..., description="风险等级")
@@ -123,6 +140,7 @@ class RiskAssessmentResponse(BaseModel):
 
 class RiskMetricsResponse(BaseModel):
     """风险指标响应"""
+
     user_id: int = Field(..., description="用户ID")
     current_balance: Decimal = Field(..., description="当前余额")
     daily_volume: Decimal = Field(..., description="每日交易量")
@@ -137,6 +155,7 @@ class RiskMetricsResponse(BaseModel):
 
 class RiskSummaryResponse(BaseModel):
     """风险摘要响应"""
+
     user_id: int = Field(..., description="用户ID")
     risk_level: str = Field(..., description="风险等级")
     active_alerts_count: int = Field(..., description="活跃警报数量")
@@ -151,6 +170,7 @@ class RiskSummaryResponse(BaseModel):
 
 class RiskReportResponse(BaseModel):
     """风险报告响应"""
+
     user_id: int = Field(..., description="用户ID")
     report_date: datetime = Field(..., description="报告日期")
     risk_profile: RiskProfileResponse = Field(..., description="风险配置")

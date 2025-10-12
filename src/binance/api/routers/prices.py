@@ -52,7 +52,7 @@ async def get_latest_price(
         if not latest_price:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"代币 {symbol} 没有价格数据"
+                detail=f"代币 {symbol} 没有价格数据",
             )
 
         return PriceDataResponse(
@@ -64,7 +64,7 @@ async def get_latest_price(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"获取价格失败: {e!s}"
+            detail=f"获取价格失败: {e!s}",
         )
 
 
@@ -80,12 +80,14 @@ async def get_price_history(
 
         price_data = []
         for item in history:
-            price_data.append(PriceDataResponse(
-                symbol=symbol,
-                price=item["price"],
-                volume=item.get("volume", 0),
-                timestamp=datetime.fromisoformat(item["timestamp"]),
-            ))
+            price_data.append(
+                PriceDataResponse(
+                    symbol=symbol,
+                    price=item["price"],
+                    volume=item.get("volume", 0),
+                    timestamp=datetime.fromisoformat(item["timestamp"]),
+                )
+            )
 
         return PriceHistoryResponse(
             symbol=symbol,
@@ -96,7 +98,7 @@ async def get_price_history(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"获取价格历史失败: {e!s}"
+            detail=f"获取价格历史失败: {e!s}",
         )
 
 
@@ -149,7 +151,7 @@ async def get_price_statistics(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"获取价格统计失败: {e!s}"
+            detail=f"获取价格统计失败: {e!s}",
         )
 
 
@@ -164,8 +166,7 @@ async def start_price_monitoring(
         from decimal import Decimal
 
         await price_service.start_monitoring(
-            symbols=symbols,
-            volatility_threshold=Decimal(str(volatility_threshold))
+            symbols=symbols, volatility_threshold=Decimal(str(volatility_threshold))
         )
 
         return {
@@ -176,7 +177,7 @@ async def start_price_monitoring(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"启动价格监控失败: {e!s}"
+            detail=f"启动价格监控失败: {e!s}",
         )
 
 
@@ -194,7 +195,7 @@ async def stop_price_monitoring(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"停止价格监控失败: {e!s}"
+            detail=f"停止价格监控失败: {e!s}",
         )
 
 
@@ -210,12 +211,14 @@ async def get_monitoring_status(
             is_running=price_service.is_running,
             monitored_symbols=monitored_symbols,
             total_connections=len(monitored_symbols),
-            active_connections=len(monitored_symbols) if price_service.is_running else 0,
+            active_connections=len(monitored_symbols)
+            if price_service.is_running
+            else 0,
         )
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"获取监控状态失败: {e!s}"
+            detail=f"获取监控状态失败: {e!s}",
         )
 
 
@@ -238,5 +241,5 @@ async def get_websocket_status(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"获取WebSocket状态失败: {e!s}"
+            detail=f"获取WebSocket状态失败: {e!s}",
         )

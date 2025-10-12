@@ -165,4 +165,3 @@ class BalanceService:
                     user.mark_credentials_invalid()
                     await self._user_repo.update(user)
                 raise
-

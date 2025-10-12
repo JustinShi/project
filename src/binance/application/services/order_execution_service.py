@@ -39,7 +39,7 @@ class OrderExecutionService:
         current_price: PriceData,
         config: TradingTarget,
         headers: dict[str, str],
-        cookies: str
+        cookies: str,
     ) -> tuple[bool, str, OTOOrderPair | None]:
         """执行OTO订单"""
         try:
@@ -72,14 +72,16 @@ class OrderExecutionService:
                 return False, validation_reason, None
 
             # 创建订单对（使用临时ID，实际应该从数据库获取）
-            temp_order_id = int(datetime.now().timestamp() * 1000) % 1000000  # 简单的临时ID生成
+            temp_order_id = (
+                int(datetime.now().timestamp() * 1000) % 1000000
+            )  # 简单的临时ID生成
             order_pair = self.order_executor.create_order_pair(
                 user_id=user_id,
                 symbol=symbol,
                 quantity=config.order_quantity,
                 buy_price=buy_price,
                 sell_price=sell_price,
-                order_pair_id=temp_order_id
+                order_pair_id=temp_order_id,
             )
 
             # 下OTO订单
@@ -90,15 +92,19 @@ class OrderExecutionService:
                     buy_price=buy_price,
                     sell_price=sell_price,
                     precision=None,
-                    chain=config.chain
+                    chain=config.chain,
                 )
 
                 if success and order_info:
                     # 更新订单信息
                     buy_order_id = order_info.get("orderId")
                     if buy_order_id:
-                        self.order_executor.update_buy_order(order_pair.id, str(buy_order_id))
-                        logger.info(f"OTO订单下单成功: {order_pair.id}, 订单ID: {buy_order_id}")
+                        self.order_executor.update_buy_order(
+                            order_pair.id, str(buy_order_id)
+                        )
+                        logger.info(
+                            f"OTO订单下单成功: {order_pair.id}, 订单ID: {buy_order_id}"
+                        )
 
                         # 启动WebSocket监听
                         await self._start_order_monitoring(user_id, headers, cookies)
@@ -111,7 +117,9 @@ class OrderExecutionService:
                     logger.error(f"OTO订单下单失败: {message}")
                     if message and "补充认证失败" in message:
                         self._blocked_users.add(user_id)
-                        block_msg = "用户因补充认证未完成被暂停交易，请完成认证后再尝试。"
+                        block_msg = (
+                            "用户因补充认证未完成被暂停交易，请完成认证后再尝试。"
+                        )
                         logger.error(block_msg, user_id=user_id)
                         return False, block_msg, None
                     return False, message, None
@@ -121,7 +129,9 @@ class OrderExecutionService:
             logger.error(error_msg)
             return False, error_msg, None
 
-    async def _start_order_monitoring(self, user_id: int, headers: dict[str, str], cookies: str):
+    async def _start_order_monitoring(
+        self, user_id: int, headers: dict[str, str], cookies: str
+    ):
         """启动订单监控"""
         try:
             # 检查是否已有连接
@@ -143,7 +153,7 @@ class OrderExecutionService:
                     user_id=user_id,
                     listen_key=listen_key,
                     on_order_update=self._handle_order_update,
-                    on_connection_event=self._handle_connection_event
+                    on_connection_event=self._handle_connection_event,
                 )
 
                 # 启动连接
@@ -166,7 +176,9 @@ class OrderExecutionService:
             status = order_data.get("status")
             side = order_data.get("side")
 
-            logger.info(f"收到订单更新: 用户={user_id}, 订单={order_id}, 状态={status}, 方向={side}")
+            logger.info(
+                f"收到订单更新: 用户={user_id}, 订单={order_id}, 状态={status}, 方向={side}"
+            )
 
             # 查找对应的订单对
             order_pair = self.order_state_machine.get_user_active_order(user_id)
@@ -188,7 +200,10 @@ class OrderExecutionService:
                             type="buy_filled",
                             title="买单成交",
                             message=f"订单 {order_pair.id} 买单已成交",
-                            data={"order_id": order_pair.id, "symbol": order_pair.symbol}
+                            data={
+                                "order_id": order_pair.id,
+                                "symbol": order_pair.symbol,
+                            },
                         )
                 elif side == "SELL":
                     # 卖单成交
@@ -205,8 +220,8 @@ class OrderExecutionService:
                             message=f"订单 {order_pair.id} 已完成",
                             data={
                                 "order_id": order_pair.id,
-                                "symbol": order_pair.symbol
-                            }
+                                "symbol": order_pair.symbol,
+                            },
                         )
             elif status == "CANCELLED":
                 # 订单取消
@@ -218,7 +233,7 @@ class OrderExecutionService:
                         type="order_cancelled",
                         title="订单已取消",
                         message=f"订单 {order_pair.id} 已被取消",
-                        data={"order_id": order_pair.id, "symbol": order_pair.symbol}
+                        data={"order_id": order_pair.id, "symbol": order_pair.symbol},
                     )
             elif status == "REJECTED":
                 # 订单被拒绝
@@ -230,7 +245,7 @@ class OrderExecutionService:
                         type="order_rejected",
                         title="订单被拒绝",
                         message=f"订单 {order_pair.id} 被拒绝",
-                        data={"order_id": order_pair.id, "symbol": order_pair.symbol}
+                        data={"order_id": order_pair.id, "symbol": order_pair.symbol},
                     )
 
         except Exception as e:
@@ -266,7 +281,9 @@ class OrderExecutionService:
         """获取用户活跃订单"""
         return self.order_executor.get_user_active_order(user_id)
 
-    async def cancel_user_order(self, user_id: int, symbol: str, headers: dict[str, str], cookies: str) -> tuple[bool, str]:
+    async def cancel_user_order(
+        self, user_id: int, symbol: str, headers: dict[str, str], cookies: str
+    ) -> tuple[bool, str]:
         """取消用户订单"""
         try:
             # 获取用户活跃订单
@@ -277,12 +294,16 @@ class OrderExecutionService:
             # 取消订单
             async with BinanceOTOOrderClient(headers, cookies) as oto_client:
                 if order_pair.buy_order_id:
-                    success, message = await oto_client.cancel_order(symbol, order_pair.buy_order_id)
+                    success, message = await oto_client.cancel_order(
+                        symbol, order_pair.buy_order_id
+                    )
                     if not success:
                         return False, f"取消买单失败: {message}"
 
                 if order_pair.sell_order_id:
-                    success, message = await oto_client.cancel_order(symbol, order_pair.sell_order_id)
+                    success, message = await oto_client.cancel_order(
+                        symbol, order_pair.sell_order_id
+                    )
                     if not success:
                         return False, f"取消卖单失败: {message}"
 

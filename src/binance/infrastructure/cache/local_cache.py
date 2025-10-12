@@ -54,9 +54,13 @@ class LocalCache:
                 try:
                     cached_at = datetime.fromisoformat(cached_at_text)
                 except ValueError:
-                    logger.warning("local_cache_invalid_cached_at", file=str(path), entry=key)
+                    logger.warning(
+                        "local_cache_invalid_cached_at", file=str(path), entry=key
+                    )
                     continue
-                result[key.upper()] = CachedItem(data=value.get("data", {}), cached_at=cached_at)
+                result[key.upper()] = CachedItem(
+                    data=value.get("data", {}), cached_at=cached_at
+                )
             return result
         except Exception as exc:
             logger.error("local_cache_load_error", file=str(path), error=str(exc))
@@ -71,7 +75,9 @@ class LocalCache:
                 }
                 for key, value in payload.items()
             }
-            path.write_text(json.dumps(serializable, ensure_ascii=False, indent=2), encoding="utf-8")
+            path.write_text(
+                json.dumps(serializable, ensure_ascii=False, indent=2), encoding="utf-8"
+            )
         except Exception as exc:
             logger.error("local_cache_save_error", file=str(path), error=str(exc))
 

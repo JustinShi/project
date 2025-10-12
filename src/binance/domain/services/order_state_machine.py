@@ -48,7 +48,9 @@ class OrderStateMachine:
         """是否可以下新订单"""
         return not self.has_active_order_for_user(user_id)
 
-    def update_order_status(self, order_pair_id: int, status: OTOOrderPairStatus) -> bool:
+    def update_order_status(
+        self, order_pair_id: int, status: OTOOrderPairStatus
+    ) -> bool:
         """更新订单状态"""
         order_pair = self.get_order_pair(order_pair_id)
         if not order_pair:
@@ -129,7 +131,6 @@ class OrderStateMachine:
                 stats["cancelled"] += 1
 
         return stats
-
 
     def __str__(self) -> str:
         stats = self.get_order_statistics()

@@ -16,6 +16,7 @@ logger = get_logger(__name__)
 @dataclass
 class PerformanceMetrics:
     """性能指标"""
+
     operation: str
     duration_ms: float
     timestamp: datetime
@@ -33,11 +34,7 @@ class PerformanceService:
         self._cache_ttl: dict[str, datetime] = {}
 
     async def measure_operation(
-        self,
-        operation: str,
-        func: Callable,
-        *args,
-        **kwargs
+        self, operation: str, func: Callable, *args, **kwargs
     ) -> Any:
         """测量操作性能"""
         start_time = time.time()
@@ -63,7 +60,7 @@ class PerformanceService:
                 duration_ms=duration_ms,
                 timestamp=datetime.now(),
                 success=success,
-                error=error
+                error=error,
             )
 
             self.metrics.append(metric)
@@ -90,7 +87,7 @@ class PerformanceService:
                 "avg_duration_ms": 0.0,
                 "max_duration_ms": 0.0,
                 "slow_operations": 0,
-                "error_rate": 0.0
+                "error_rate": 0.0,
             }
 
         total_operations = len(recent_metrics)
@@ -109,14 +106,15 @@ class PerformanceService:
             "max_duration_ms": max_duration,
             "slow_operations": slow_operations,
             "error_rate": (error_operations / total_operations) * 100,
-            "time_range_hours": hours
+            "time_range_hours": hours,
         }
 
     def get_operation_metrics(self, operation: str, hours: int = 1) -> dict[str, Any]:
         """获取特定操作的性能指标"""
         cutoff_time = datetime.now() - timedelta(hours=hours)
         operation_metrics = [
-            m for m in self.metrics
+            m
+            for m in self.metrics
             if m.operation == operation and m.timestamp >= cutoff_time
         ]
 
@@ -127,7 +125,7 @@ class PerformanceService:
                 "success_rate": 0.0,
                 "avg_duration_ms": 0.0,
                 "max_duration_ms": 0.0,
-                "min_duration_ms": 0.0
+                "min_duration_ms": 0.0,
             }
 
         total_calls = len(operation_metrics)
@@ -141,14 +139,17 @@ class PerformanceService:
             "avg_duration_ms": sum(durations) / len(durations),
             "max_duration_ms": max(durations),
             "min_duration_ms": min(durations),
-            "time_range_hours": hours
+            "time_range_hours": hours,
         }
 
-    def get_slow_operations(self, threshold_ms: float = 1000, hours: int = 1) -> list[dict[str, Any]]:
+    def get_slow_operations(
+        self, threshold_ms: float = 1000, hours: int = 1
+    ) -> list[dict[str, Any]]:
         """获取慢操作列表"""
         cutoff_time = datetime.now() - timedelta(hours=hours)
         slow_metrics = [
-            m for m in self.metrics
+            m
+            for m in self.metrics
             if m.duration_ms > threshold_ms and m.timestamp >= cutoff_time
         ]
 
@@ -158,7 +159,7 @@ class PerformanceService:
                 "duration_ms": m.duration_ms,
                 "timestamp": m.timestamp.isoformat(),
                 "success": m.success,
-                "error": m.error
+                "error": m.error,
             }
             for m in sorted(slow_metrics, key=lambda x: x.duration_ms, reverse=True)
         ]
@@ -167,8 +168,7 @@ class PerformanceService:
         """获取错误操作列表"""
         cutoff_time = datetime.now() - timedelta(hours=hours)
         error_metrics = [
-            m for m in self.metrics
-            if not m.success and m.timestamp >= cutoff_time
+            m for m in self.metrics if not m.success and m.timestamp >= cutoff_time
         ]
 
         return [
@@ -176,7 +176,7 @@ class PerformanceService:
                 "operation": m.operation,
                 "duration_ms": m.duration_ms,
                 "timestamp": m.timestamp.isoformat(),
-                "error": m.error
+                "error": m.error,
             }
             for m in sorted(error_metrics, key=lambda x: x.timestamp, reverse=True)
         ]
@@ -221,11 +221,10 @@ class PerformanceService:
         """获取缓存统计"""
         return {
             "total_keys": len(self._cache),
-            "expired_keys": len([
-                k for k, ttl in self._cache_ttl.items()
-                if datetime.now() > ttl
-            ]),
-            "memory_usage_estimate": len(str(self._cache))  # 粗略估算
+            "expired_keys": len(
+                [k for k, ttl in self._cache_ttl.items() if datetime.now() > ttl]
+            ),
+            "memory_usage_estimate": len(str(self._cache)),  # 粗略估算
         }
 
     def optimize_database_queries(self, queries: list[str]) -> list[str]:
@@ -261,11 +260,15 @@ class PerformanceService:
         # 分析错误率
         summary = self.get_performance_summary(hours=24)
         if summary["error_rate"] > 5:
-            recommendations.append(f"错误率过高 ({summary['error_rate']:.1f}%)，建议检查系统稳定性")
+            recommendations.append(
+                f"错误率过高 ({summary['error_rate']:.1f}%)，建议检查系统稳定性"
+            )
 
         # 分析平均响应时间
         if summary["avg_duration_ms"] > 1000:
-            recommendations.append(f"平均响应时间过长 ({summary['avg_duration_ms']:.1f}ms)，建议优化")
+            recommendations.append(
+                f"平均响应时间过长 ({summary['avg_duration_ms']:.1f}ms)，建议优化"
+            )
 
         # 分析缓存命中率
         cache_stats = self.get_cache_stats()
@@ -289,5 +292,5 @@ class PerformanceService:
             "recommendations": recommendations,
             "cache_stats": cache_stats,
             "report_time": datetime.now().isoformat(),
-            "time_range_hours": hours
+            "time_range_hours": hours,
         }

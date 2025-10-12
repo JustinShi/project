@@ -13,6 +13,7 @@ from binance.domain.entities.risk_profile import RiskFactor, RiskLevel, RiskProf
 @dataclass
 class RiskMetrics:
     """风险指标"""
+
     user_id: int
     current_balance: Decimal
     daily_volume: Decimal
@@ -50,11 +51,7 @@ class RiskManager:
         return self._risk_metrics.get(user_id)
 
     def assess_order_risk(
-        self,
-        user_id: int,
-        symbol: str,
-        order_amount: Decimal,
-        current_price: PriceData
+        self, user_id: int, symbol: str, order_amount: Decimal, current_price: PriceData
     ) -> tuple[bool, str, list[RiskAlert]]:
         """评估订单风险"""
         alerts = []
@@ -77,7 +74,7 @@ class RiskManager:
                 message="当前时间不允许交易",
                 severity=AlertSeverity.WARNING,
                 risk_factor=RiskFactor.USER_BEHAVIOR,
-                risk_level=RiskLevel.MEDIUM
+                risk_level=RiskLevel.MEDIUM,
             )
             alerts.append(alert)
             return False, "交易时间限制", alerts
@@ -92,7 +89,7 @@ class RiskManager:
                 risk_factor=RiskFactor.BALANCE_INSUFFICIENT,
                 risk_level=RiskLevel.HIGH,
                 current_value=metrics.current_balance,
-                threshold_value=order_amount
+                threshold_value=order_amount,
             )
             alerts.append(alert)
             return False, "余额不足", alerts
@@ -108,7 +105,7 @@ class RiskManager:
                 risk_factor=RiskFactor.POSITION_SIZE,
                 risk_level=RiskLevel.MEDIUM,
                 current_value=order_amount,
-                threshold_value=max_position
+                threshold_value=max_position,
             )
             alerts.append(alert)
             return False, "仓位过大", alerts
@@ -123,7 +120,7 @@ class RiskManager:
                 risk_factor=RiskFactor.PRICE_VOLATILITY,
                 risk_level=RiskLevel.HIGH,
                 current_value=metrics.price_volatility,
-                threshold_value=profile.max_price_volatility
+                threshold_value=profile.max_price_volatility,
             )
             alerts.append(alert)
             return False, "价格波动过大", alerts
@@ -138,7 +135,7 @@ class RiskManager:
                 risk_factor=RiskFactor.ORDER_FREQUENCY,
                 risk_level=RiskLevel.MEDIUM,
                 current_value=Decimal(metrics.orders_count_hour),
-                threshold_value=Decimal(profile.max_orders_per_hour)
+                threshold_value=Decimal(profile.max_orders_per_hour),
             )
             alerts.append(alert)
             return False, "订单频率过高", alerts
@@ -152,7 +149,7 @@ class RiskManager:
                 risk_factor=RiskFactor.ORDER_FREQUENCY,
                 risk_level=RiskLevel.HIGH,
                 current_value=Decimal(metrics.orders_count_today),
-                threshold_value=Decimal(profile.max_orders_per_day)
+                threshold_value=Decimal(profile.max_orders_per_day),
             )
             alerts.append(alert)
             return False, "每日订单数超限", alerts
@@ -167,7 +164,7 @@ class RiskManager:
                 risk_factor=RiskFactor.USER_BEHAVIOR,
                 risk_level=RiskLevel.CRITICAL,
                 current_value=Decimal(metrics.consecutive_losses),
-                threshold_value=Decimal(profile.max_consecutive_losses)
+                threshold_value=Decimal(profile.max_consecutive_losses),
             )
             alerts.append(alert)
             return False, "交易暂停", alerts
@@ -182,7 +179,7 @@ class RiskManager:
                 risk_factor=RiskFactor.POSITION_SIZE,
                 risk_level=RiskLevel.MEDIUM,
                 current_value=metrics.daily_volume + order_amount,
-                threshold_value=profile.max_daily_volume
+                threshold_value=profile.max_daily_volume,
             )
             alerts.append(alert)
             return False, "每日交易量超限", alerts
@@ -194,7 +191,7 @@ class RiskManager:
         user_id: int,
         symbol: str,
         price_data: PriceData,
-        price_history: list[PriceData]
+        price_history: list[PriceData],
     ) -> list[RiskAlert]:
         """监控价格波动"""
         alerts = []
@@ -208,7 +205,9 @@ class RiskManager:
             return alerts
 
         # 获取时间窗口内的价格数据
-        window_start = datetime.now() - timedelta(minutes=profile.volatility_window_minutes)
+        window_start = datetime.now() - timedelta(
+            minutes=profile.volatility_window_minutes
+        )
         window_prices = [p for p in price_history if p.timestamp >= window_start]
 
         if len(window_prices) < 2:
@@ -230,16 +229,17 @@ class RiskManager:
                 risk_level=RiskLevel.HIGH,
                 current_value=Decimal(volatility),
                 threshold_value=profile.max_price_volatility,
-                data={"symbol": symbol, "window_minutes": profile.volatility_window_minutes}
+                data={
+                    "symbol": symbol,
+                    "window_minutes": profile.volatility_window_minutes,
+                },
             )
             alerts.append(alert)
 
         return alerts
 
     def create_risk_profile(
-        self,
-        user_id: int,
-        risk_level: RiskLevel = RiskLevel.MEDIUM
+        self, user_id: int, risk_level: RiskLevel = RiskLevel.MEDIUM
     ) -> RiskProfile:
         """创建默认风险配置"""
         if risk_level == RiskLevel.LOW:
@@ -254,7 +254,7 @@ class RiskManager:
                 max_single_order_amount=Decimal("500.0"),
                 max_daily_volume=Decimal("5000.0"),
                 max_consecutive_losses=2,
-                max_daily_loss=Decimal("200.0")
+                max_daily_loss=Decimal("200.0"),
             )
         elif risk_level == RiskLevel.HIGH:
             return RiskProfile(
@@ -268,7 +268,7 @@ class RiskManager:
                 max_single_order_amount=Decimal("2000.0"),
                 max_daily_volume=Decimal("20000.0"),
                 max_consecutive_losses=5,
-                max_daily_loss=Decimal("1000.0")
+                max_daily_loss=Decimal("1000.0"),
             )
         else:  # MEDIUM
             return RiskProfile(
@@ -282,7 +282,7 @@ class RiskManager:
                 max_single_order_amount=Decimal("1000.0"),
                 max_daily_volume=Decimal("10000.0"),
                 max_consecutive_losses=3,
-                max_daily_loss=Decimal("500.0")
+                max_daily_loss=Decimal("500.0"),
             )
 
     def _create_alert(
@@ -295,7 +295,7 @@ class RiskManager:
         risk_level: RiskLevel,
         current_value: Decimal | None = None,
         threshold_value: Decimal | None = None,
-        data: dict[str, Any] | None = None
+        data: dict[str, Any] | None = None,
     ) -> RiskAlert:
         """创建风险警报"""
         alert = RiskAlert(
@@ -309,7 +309,7 @@ class RiskManager:
             current_value=current_value,
             threshold_value=threshold_value,
             data=data,
-            triggered_at=datetime.now()
+            triggered_at=datetime.now(),
         )
 
         # 添加到活跃警报列表
@@ -357,5 +357,7 @@ class RiskManager:
             "consecutive_losses": metrics.consecutive_losses if metrics else 0,
             "orders_today": metrics.orders_count_today if metrics else 0,
             "orders_this_hour": metrics.orders_count_hour if metrics else 0,
-            "trading_allowed": profile.is_trading_allowed(datetime.now()) if profile else False
+            "trading_allowed": profile.is_trading_allowed(datetime.now())
+            if profile
+            else False,
         }

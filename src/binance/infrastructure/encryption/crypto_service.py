@@ -87,4 +87,3 @@ def get_crypto_service() -> CryptoService:
     """
     settings = get_settings()
     return CryptoService(settings.encryption_key)
-

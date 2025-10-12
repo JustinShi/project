@@ -104,7 +104,9 @@ class Price:
         factor_value = Decimal(str(factor))
         return Price(self._value * factor_value, self._precision)
 
-    def apply_percentage_offset(self, percentage: Decimal, is_increase: bool = True) -> "Price":
+    def apply_percentage_offset(
+        self, percentage: Decimal, is_increase: bool = True
+    ) -> "Price":
         """应用百分比偏移
 
         Args:
@@ -149,4 +151,3 @@ class Price:
 
     def __ge__(self, other: "Price") -> bool:
         return self._value >= other._value
-

@@ -152,4 +152,3 @@ class Quantity:
 
     def __ge__(self, other: "Quantity") -> bool:
         return self._value >= other._value
-

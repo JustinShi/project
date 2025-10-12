@@ -32,6 +32,7 @@ logger = get_logger(__name__)
 
 class AuthenticationError(Exception):
     """认证失败异常"""
+
     pass
 
 
@@ -42,16 +43,24 @@ class StrategyExecutor:
         self.config_manager = StrategyConfigManager(config_path)
         self.symbol_mapper = SymbolMapper()
         self._running_tasks: dict[str, asyncio.Task] = {}
-        self._user_volumes: dict[int, dict[str, Decimal]] = {}  # {user_id: {strategy_id: volume}}
+        self._user_volumes: dict[
+            int, dict[str, Decimal]
+        ] = {}  # {user_id: {strategy_id: volume}}
         self._stop_flags: dict[str, bool] = {}
 
         # 订单状态追踪
-        self._order_status: dict[str, dict[str, Any]] = {}  # {order_id: {status, side, quantity, etc}}
+        self._order_status: dict[
+            str, dict[str, Any]
+        ] = {}  # {order_id: {status, side, quantity, etc}}
         self._order_events: dict[str, asyncio.Event] = {}  # {order_id: Event}
 
         # WebSocket 连接管理
-        self._ws_connectors: dict[int, OrderWebSocketConnector] = {}  # {user_id: connector}
-        self._listen_key_managers: dict[int, ListenKeyManager] = {}  # {user_id: manager}
+        self._ws_connectors: dict[
+            int, OrderWebSocketConnector
+        ] = {}  # {user_id: connector}
+        self._listen_key_managers: dict[
+            int, ListenKeyManager
+        ] = {}  # {user_id: manager}
 
     async def start_all_strategies(self) -> None:
         """启动所有启用的策略"""
@@ -162,11 +171,7 @@ class StrategyExecutor:
 
         logger.info("策略执行完成", strategy_id=strategy.strategy_id)
 
-    async def _run_user_strategy(
-        self,
-        user_id: int,
-        strategy: StrategyConfig
-    ) -> None:
+    async def _run_user_strategy(self, user_id: int, strategy: StrategyConfig) -> None:
         """运行单个用户的策略（新逻辑：循环批次执行）
 
         执行流程：
@@ -198,7 +203,9 @@ class StrategyExecutor:
         headers, cookies = credentials
 
         # 建立 WebSocket 连接以监听订单状态
-        ws_connected = await self._ensure_websocket_connection(user_id, headers, cookies)
+        ws_connected = await self._ensure_websocket_connection(
+            user_id, headers, cookies
+        )
         if not ws_connected:
             logger.error("WebSocket连接失败", user_id=user_id)
             return
@@ -238,18 +245,9 @@ class StrategyExecutor:
                 )
 
                 # 执行 N 次交易
-                early_stop = await self._execute_batch_trades(
+                await self._execute_batch_trades(
                     user_id, strategy, loop_count, headers, cookies
                 )
-
-                # 如果批次中提前达标，直接退出
-                if early_stop:
-                    logger.info(
-                        "批次中已达标，终止策略",
-                        user_id=user_id,
-                        strategy_id=strategy.strategy_id,
-                    )
-                    break
 
                 # 批次完成，等待交易量数据更新
                 logger.info(
@@ -258,14 +256,14 @@ class StrategyExecutor:
                     strategy_id=strategy.strategy_id,
                     delay_seconds=strategy.volume_check_delay_seconds,
                 )
-                
+
                 # 等待指定时间，让交易量数据在服务器端更新
                 for _ in range(strategy.volume_check_delay_seconds * 10):
                     if self._stop_flags.get(strategy.strategy_id, False):
                         logger.info("收到停止信号，终止等待", user_id=user_id)
                         return
                     await asyncio.sleep(0.1)
-                
+
                 logger.info(
                     "等待完成，重新查询交易量",
                     user_id=user_id,
@@ -316,17 +314,15 @@ class StrategyExecutor:
         try:
             # 获取代币信息（优先使用缓存）
             token_info_entry = await self._get_token_info_with_cache(
-                token_symbol,
-                headers,
-                cookies
+                token_symbol, headers, cookies
             )
-            
+
             if not token_info_entry:
                 logger.error("无法获取代币信息", token=token_symbol)
                 return Decimal("0")
-            
+
             mul_point = int(token_info_entry.get("mulPoint", 1) or 1)
-            
+
             # 获取用户交易量
             async with BinanceClient(headers=headers, cookies=cookies) as client:
                 volume_data = await client.get_user_volume()
@@ -390,19 +386,19 @@ class StrategyExecutor:
         try:
             # 获取代币信息（优先使用缓存）
             token_info_entry = await self._get_token_info_with_cache(
-                strategy.target_token,
-                headers,
-                cookies
+                strategy.target_token, headers, cookies
             )
-            
+
             if not token_info_entry:
                 logger.error("无法获取代币信息", token=strategy.target_token)
                 return 1
-            
+
             mul_point = int(token_info_entry.get("mulPoint", 1) or 1)
 
             # 单次交易的真实交易量 = single_trade_amount_usdt / mulPoint
-            single_real_volume = strategy.single_trade_amount_usdt / Decimal(str(mul_point))
+            single_real_volume = strategy.single_trade_amount_usdt / Decimal(
+                str(mul_point)
+            )
 
             # 计算循环次数（向上取整）
             loop_count = math.ceil(float(remaining_volume / single_real_volume))
@@ -434,7 +430,7 @@ class StrategyExecutor:
         loop_count: int,
         headers: dict[str, str],
         cookies: str,
-    ) -> bool:
+    ) -> None:
         """执行批次交易
 
         Args:
@@ -443,9 +439,6 @@ class StrategyExecutor:
             loop_count: 循环次数
             headers: 请求头
             cookies: Cookies
-
-        Returns:
-            是否提前达标（True=达标提前终止，False=正常完成批次）
         """
         for i in range(loop_count):
             # 检查停止标志
@@ -478,24 +471,6 @@ class StrategyExecutor:
                         loop=f"{i + 1}/{loop_count}",
                         trade_volume=str(trade_volume),
                     )
-
-                    # 每笔交易成功后，检查是否已达标
-                    current_volume = await self._query_user_current_volume(
-                        user_id, strategy.target_token, headers, cookies
-                    )
-
-                    if current_volume >= strategy.target_volume:
-                        logger.info(
-                            "批次交易中达成目标，提前终止",
-                            user_id=user_id,
-                            strategy_id=strategy.strategy_id,
-                            current_volume=str(current_volume),
-                            target_volume=str(strategy.target_volume),
-                            completed_loops=i + 1,
-                            total_loops=loop_count,
-                        )
-                        return True  # 提前达标
-
                 else:
                     logger.warning(
                         "批次交易失败",
@@ -505,7 +480,7 @@ class StrategyExecutor:
                     # 失败后等待重试间隔
                     for _ in range(strategy.trade_interval_seconds * 20):
                         if self._stop_flags.get(strategy.strategy_id, False):
-                            return False
+                            return
                         await asyncio.sleep(0.1)
                     continue
 
@@ -520,7 +495,7 @@ class StrategyExecutor:
                 # 异常后等待重试间隔
                 for _ in range(strategy.trade_interval_seconds * 20):
                     if self._stop_flags.get(strategy.strategy_id, False):
-                        return False
+                        return
                     await asyncio.sleep(0.1)
                 continue
 
@@ -529,8 +504,6 @@ class StrategyExecutor:
                 if self._stop_flags.get(strategy.strategy_id, False):
                     break
                 await asyncio.sleep(0.1)
-
-        return False  # 批次正常完成，未提前达标
 
     async def _execute_single_trade(
         self,
@@ -554,20 +527,18 @@ class StrategyExecutor:
 
         # 获取代币信息（优先使用本地缓存）
         token_info_entry = await self._get_token_info_with_cache(
-            strategy.target_token,
-            headers,
-            cookies
+            strategy.target_token, headers, cookies
         )
-        
+
         if not token_info_entry:
             logger.error("无法获取代币信息", token=strategy.target_token)
             return False, Decimal("0")
-        
+
         last_price = Decimal(str(token_info_entry.get("price", "0")))
         if not last_price or last_price == Decimal("0"):
             logger.error("无法获取代币价格", token=strategy.target_token)
             return False, Decimal("0")
-        
+
         mul_point = int(token_info_entry.get("mulPoint", 1) or 1)
         logger.info(
             "代币信息",
@@ -581,24 +552,27 @@ class StrategyExecutor:
         await self._ensure_token_precision_cached(
             token_info_entry.get("alphaId") or f"ALPHA_{strategy.target_token.upper()}",
             headers,
-            cookies
+            cookies,
         )
-        
+
         # 获取符号映射
         mapping = self.symbol_mapper.get_mapping(
-            strategy.target_token,
-            strategy.target_chain
+            strategy.target_token, strategy.target_chain
         )
 
         # 计算买入/卖出价格
         # 买入价格 = 市场价格 × (1 + buy_offset_percentage / 100) - 溢价买入
-        buy_offset_multiplier = Decimal("1") + (strategy.buy_offset_percentage / Decimal("100"))
+        buy_offset_multiplier = Decimal("1") + (
+            strategy.buy_offset_percentage / Decimal("100")
+        )
         buy_value = (last_price * buy_offset_multiplier).quantize(
             Decimal("1e-8"), rounding=ROUND_DOWN
         )
 
         # 卖出价格 = 买入价格 × (1 - sell_profit_percentage / 100) - 低价卖出
-        sell_discount_multiplier = Decimal("1") - (strategy.sell_profit_percentage / Decimal("100"))
+        sell_discount_multiplier = Decimal("1") - (
+            strategy.sell_profit_percentage / Decimal("100")
+        )
         sell_value = (buy_value * sell_discount_multiplier).quantize(
             Decimal("1e-8"), rounding=ROUND_DOWN
         )
@@ -647,8 +621,7 @@ class StrategyExecutor:
                 # 等待买单成交
                 logger.info("等待买单成交", order_id=working_order_id)
                 buy_filled = await self._wait_for_order_filled(
-                    working_order_id,
-                    timeout=strategy.order_timeout_seconds
+                    working_order_id, timeout=strategy.order_timeout_seconds
                 )
 
                 if not buy_filled:
@@ -660,8 +633,7 @@ class StrategyExecutor:
                 # 等待卖单成交
                 logger.info("等待卖单成交", order_id=pending_order_id)
                 sell_filled = await self._wait_for_order_filled(
-                    pending_order_id,
-                    timeout=strategy.order_timeout_seconds
+                    pending_order_id, timeout=strategy.order_timeout_seconds
                 )
 
                 if not sell_filled:
@@ -711,9 +683,7 @@ class StrategyExecutor:
                     return False, Decimal("0")
 
     async def _fetch_last_price(
-        self,
-        token_list: list[dict[str, Any]],
-        symbol_short: str
+        self, token_list: list[dict[str, Any]], symbol_short: str
     ) -> Decimal | None:
         """从 aggTicker24 获取代币价格
 
@@ -730,9 +700,7 @@ class StrategyExecutor:
         return None
 
     async def _get_mul_point(
-        self,
-        token_list: list[dict[str, Any]],
-        symbol_short: str
+        self, token_list: list[dict[str, Any]], symbol_short: str
     ) -> int:
         """获取代币的交易量倍数 (mulPoint)
 
@@ -757,10 +725,7 @@ class StrategyExecutor:
         return 1
 
     async def _ensure_token_precision_cached(
-        self,
-        alpha_symbol: str,
-        headers: dict[str, str],
-        cookies: str
+        self, alpha_symbol: str, headers: dict[str, str], cookies: str
     ) -> None:
         """确保代币精度信息已缓存
 
@@ -770,10 +735,10 @@ class StrategyExecutor:
             cookies: Cookies
         """
         from binance.infrastructure.cache.local_cache import LocalCache
-        
+
         cache = LocalCache()
         symbol_with_quote = f"{alpha_symbol}USDT"
-        
+
         # 检查缓存是否存在
         cached_precision = cache.get_token_precision(symbol_with_quote)
         if cached_precision:
@@ -783,15 +748,15 @@ class StrategyExecutor:
                 source="cache",
             )
             return
-        
+
         # 缓存不存在，请求 API 获取
         logger.info("精度缓存未命中，请求 API 获取", symbol=symbol_with_quote)
-        
+
         try:
             async with BinanceClient(headers=headers, cookies=cookies) as client:
                 exchange_info = await client.get_exchange_info()
                 symbols_list = exchange_info.get("symbols", [])
-                
+
                 # 查找目标交易对
                 for symbol_data in symbols_list:
                     if symbol_data.get("symbol") == symbol_with_quote:
@@ -805,9 +770,11 @@ class StrategyExecutor:
                             source="api",
                         )
                         return
-                
-                logger.warning("API 返回的交易对列表中未找到目标", symbol=symbol_with_quote)
-                
+
+                logger.warning(
+                    "API 返回的交易对列表中未找到目标", symbol=symbol_with_quote
+                )
+
         except Exception as e:
             logger.error(
                 "获取精度信息失败",
@@ -816,10 +783,7 @@ class StrategyExecutor:
             )
 
     async def _get_token_info_with_cache(
-        self,
-        symbol_short: str,
-        headers: dict[str, str],
-        cookies: str
+        self, symbol_short: str, headers: dict[str, str], cookies: str
     ) -> dict[str, Any] | None:
         """获取代币信息（优先使用缓存）
 
@@ -838,10 +802,10 @@ class StrategyExecutor:
             代币信息字典，如果获取失败返回 None
         """
         from binance.infrastructure.cache.local_cache import LocalCache
-        
+
         cache = LocalCache()
         symbol_upper = symbol_short.upper()
-        
+
         # 1. 尝试从缓存读取
         cached_data = cache.get_token_info(symbol_upper)
         if cached_data:
@@ -852,14 +816,14 @@ class StrategyExecutor:
                 source="cache",
             )
             return cached_data
-        
+
         # 2. 缓存不存在，请求 API
         logger.info("缓存未命中，请求 API 获取代币信息", token=symbol_short)
-        
+
         try:
             async with BinanceClient(headers=headers, cookies=cookies) as client:
                 token_list = await client.get_token_info()
-                
+
                 # 3. 在列表中查找目标代币
                 for entry in token_list:
                     if str(entry.get("symbol", "")).upper() == symbol_upper:
@@ -872,10 +836,10 @@ class StrategyExecutor:
                             source="api",
                         )
                         return entry
-                
+
                 logger.warning("API 返回的代币列表中未找到目标代币", token=symbol_short)
                 return None
-                
+
         except Exception as e:
             logger.error(
                 "获取代币信息失败",
@@ -885,8 +849,7 @@ class StrategyExecutor:
             return None
 
     async def _get_user_credentials(
-        self,
-        user_id: int
+        self, user_id: int
     ) -> tuple[dict[str, str], str] | None:
         """获取用户凭证
 
@@ -905,13 +868,13 @@ class StrategyExecutor:
                 # 确保 headers 是字符串类型（处理可能的 bytes）
                 headers_str = user.headers
                 if isinstance(headers_str, bytes):
-                    headers_str = headers_str.decode('utf-8')
+                    headers_str = headers_str.decode("utf-8")
                 elif not isinstance(headers_str, str):
                     headers_str = str(headers_str)
-                
+
                 # 解析 JSON 格式的 headers
                 headers = json.loads(headers_str)
-                
+
                 # 确保 headers 是字典类型
                 if not isinstance(headers, dict):
                     logger.error(
@@ -920,7 +883,7 @@ class StrategyExecutor:
                         parsed_type=type(headers).__name__,
                     )
                     headers = {}
-                    
+
             except Exception as e:
                 logger.error(
                     "headers 解析失败",
@@ -929,23 +892,25 @@ class StrategyExecutor:
                     headers_type=type(user.headers).__name__,
                 )
                 headers = {}
-            
+
             # 处理 cookies（可能是 JSON 格式的字典，也可能是标准 cookie 字符串）
             cookies = user.cookies or ""
             if cookies:
                 # 确保 cookies 是字符串类型
                 if isinstance(cookies, bytes):
-                    cookies = cookies.decode('utf-8')
+                    cookies = cookies.decode("utf-8")
                 elif not isinstance(cookies, str):
                     cookies = str(cookies)
-                
+
                 # 如果 cookies 是 JSON 格式，转换为标准 cookie 字符串
-                if cookies.strip().startswith('{'):
+                if cookies.strip().startswith("{"):
                     try:
                         cookies_dict = json.loads(cookies)
                         if isinstance(cookies_dict, dict):
                             # 转换为 "key1=value1; key2=value2" 格式
-                            cookies = "; ".join(f"{k}={v}" for k, v in cookies_dict.items())
+                            cookies = "; ".join(
+                                f"{k}={v}" for k, v in cookies_dict.items()
+                            )
                             logger.info(
                                 "已将 JSON 格式的 cookies 转换为标准格式",
                                 user_id=user_id,
@@ -957,7 +922,7 @@ class StrategyExecutor:
                             user_id=user_id,
                             error=str(e),
                         )
-            
+
             return headers, cookies
         return None
 
@@ -977,7 +942,10 @@ class StrategyExecutor:
         is_running = strategy_id in self._running_tasks
         user_volumes = {}
         for user_id in strategy.user_ids:
-            if user_id in self._user_volumes and strategy_id in self._user_volumes[user_id]:
+            if (
+                user_id in self._user_volumes
+                and strategy_id in self._user_volumes[user_id]
+            ):
                 user_volumes[user_id] = str(self._user_volumes[user_id][strategy_id])
 
         total_volume = sum(
@@ -992,7 +960,9 @@ class StrategyExecutor:
             "enabled": strategy.enabled,
             "target_volume": str(strategy.target_volume),
             "total_volume": str(total_volume),
-            "progress_percentage": float(total_volume / strategy.target_volume * 100) if strategy.target_volume > 0 else 0,
+            "progress_percentage": float(total_volume / strategy.target_volume * 100)
+            if strategy.target_volume > 0
+            else 0,
             "user_volumes": user_volumes,
             "user_count": len(strategy.user_ids),
         }
@@ -1005,10 +975,7 @@ class StrategyExecutor:
         ]
 
     async def _ensure_websocket_connection(
-        self,
-        user_id: int,
-        headers: dict[str, str],
-        cookies: str
+        self, user_id: int, headers: dict[str, str], cookies: str
     ) -> bool:
         """确保用户的 WebSocket 连接已建立
 
@@ -1116,7 +1083,9 @@ class StrategyExecutor:
             if order_id in self._order_events:
                 self._order_events[order_id].set()
 
-    async def _handle_connection_event(self, event_type: str, data: dict[str, Any]) -> None:
+    async def _handle_connection_event(
+        self, event_type: str, data: dict[str, Any]
+    ) -> None:
         """处理 WebSocket 连接事件
 
         Args:
@@ -1125,11 +1094,7 @@ class StrategyExecutor:
         """
         logger.info("WebSocket连接事件", event_type=event_type, data=data)
 
-    async def _wait_for_order_filled(
-        self,
-        order_id: str,
-        timeout: int = 300
-    ) -> bool:
+    async def _wait_for_order_filled(self, order_id: str, timeout: int = 300) -> bool:
         """等待订单完全成交
 
         Args:
@@ -1142,16 +1107,24 @@ class StrategyExecutor:
         # 确保 order_id 是字符串
         order_id = str(order_id)
 
+        # 先检查订单是否已经成交（避免时序问题）
+        order_status = self._order_status.get(order_id, {})
+        status = order_status.get("status")
+        
+        if status == "FILLED":
+            logger.info("订单已成交（检查时已完成）", order_id=order_id)
+            return True
+        elif status in ["CANCELED", "REJECTED", "EXPIRED"]:
+            logger.warning("订单未成交（检查时已终止）", order_id=order_id, status=status)
+            return False
+
         # 创建事件
         if order_id not in self._order_events:
             self._order_events[order_id] = asyncio.Event()
 
         try:
             # 等待订单完成（带超时）
-            await asyncio.wait_for(
-                self._order_events[order_id].wait(),
-                timeout=timeout
-            )
+            await asyncio.wait_for(self._order_events[order_id].wait(), timeout=timeout)
 
             # 检查订单状态
             order_status = self._order_status.get(order_id, {})
@@ -1196,6 +1169,6 @@ class StrategyExecutor:
         ]
 
         error_message_lower = error_message.lower()
-        return any(keyword.lower() in error_message_lower for keyword in auth_error_keywords)
-
-
+        return any(
+            keyword.lower() in error_message_lower for keyword in auth_error_keywords
+        )

@@ -14,7 +14,7 @@ from binance.config import get_settings
 _LOGGER_CONFIGURED = False
 
 
-def _format_console_output(logger: Any, name: str, event_dict: dict) -> str:
+def _format_console_output(_logger: Any, _name: str, event_dict: dict) -> str:
     """自定义控制台日志格式化器
 
     格式: [时间] [级别] [模块] 消息 | 字段1=值1 字段2=值2
@@ -44,17 +44,19 @@ def _format_console_output(logger: Any, name: str, event_dict: dict) -> str:
 
     # 级别颜色
     level_colors = {
-        "DEBUG": "\033[36m",    # 青色
-        "INFO": "\033[32m",     # 绿色
+        "DEBUG": "\033[36m",  # 青色
+        "INFO": "\033[32m",  # 绿色
         "WARNING": "\033[33m",  # 黄色
-        "ERROR": "\033[31m",    # 红色
-        "CRITICAL": "\033[35m", # 紫色
+        "ERROR": "\033[31m",  # 红色
+        "CRITICAL": "\033[35m",  # 紫色
     }
     reset = "\033[0m"
     level_color = level_colors.get(level, "")
 
     # 构建基础消息
-    base_msg = f"[{time_str}] {level_color}[{level:7}]{reset} [{short_module:30}] {event}"
+    base_msg = (
+        f"[{time_str}] {level_color}[{level:7}]{reset} [{short_module:30}] {event}"
+    )
 
     # 添加额外字段
     if event_dict:
@@ -142,4 +144,3 @@ def get_logger(name: str = __name__) -> Any:
 
     # 绑定模块名称到 logger 的 context 中
     return structlog.get_logger().bind(module=name)
-

@@ -54,9 +54,7 @@ class BinanceOTOOrderClient:
                         cookies_dict[key] = value
 
             self._client = httpx.AsyncClient(
-                headers=self.headers,
-                cookies=cookies_dict,
-                timeout=30.0
+                headers=self.headers, cookies=cookies_dict, timeout=30.0
             )
 
     async def place_oto_order(
@@ -66,7 +64,7 @@ class BinanceOTOOrderClient:
         buy_price: Price,
         sell_price: Price,
         precision: int | None = None,
-        chain: str | None = None
+        chain: str | None = None,
     ) -> tuple[bool, str, dict | None]:
         """下OTO订单"""
         try:
@@ -110,20 +108,32 @@ class BinanceOTOOrderClient:
             # 计算总金额，确保精度一致
             # 使用Decimal进行精确计算，然后转换为字符串
             total_amount_decimal = buy_price_decimal * quantity_decimal
-            total_amount_decimal = total_amount_decimal.quantize(Decimal(f"1e-{effective_precision}"), rounding=ROUND_DOWN)
+            total_amount_decimal = total_amount_decimal.quantize(
+                Decimal(f"1e-{effective_precision}"), rounding=ROUND_DOWN
+            )
 
             # 构建OTO订单参数 - 使用正确的API格式
             order_data = {
                 "baseAsset": resolved_symbol.base_asset,
                 "quoteAsset": resolved_symbol.quote_asset,
                 "workingSide": "BUY",
-                "workingPrice": self._decimal_to_payload(buy_price_decimal, effective_precision),
-                "workingQuantity": self._decimal_to_payload(quantity_decimal, quantity_precision),
-                "paymentDetails": [{
-                    "amount": self._decimal_to_payload(total_amount_decimal, effective_precision),
-                    "paymentWalletType": "CARD"
-                }],
-                "pendingPrice": self._decimal_to_payload(sell_price_decimal, effective_precision)
+                "workingPrice": self._decimal_to_payload(
+                    buy_price_decimal, effective_precision
+                ),
+                "workingQuantity": self._decimal_to_payload(
+                    quantity_decimal, quantity_precision
+                ),
+                "paymentDetails": [
+                    {
+                        "amount": self._decimal_to_payload(
+                            total_amount_decimal, effective_precision
+                        ),
+                        "paymentWalletType": "CARD",
+                    }
+                ],
+                "pendingPrice": self._decimal_to_payload(
+                    sell_price_decimal, effective_precision
+                ),
             }
 
             logger.info(
@@ -133,15 +143,21 @@ class BinanceOTOOrderClient:
                 precision=effective_precision,
                 quantity_precision=quantity_precision,
                 quantity=self._decimal_to_payload(quantity_decimal, quantity_precision),
-                buy_price=self._decimal_to_payload(buy_price_decimal, effective_precision),
-                sell_price=self._decimal_to_payload(sell_price_decimal, effective_precision),
-                amount=self._decimal_to_payload(total_amount_decimal, effective_precision),
+                buy_price=self._decimal_to_payload(
+                    buy_price_decimal, effective_precision
+                ),
+                sell_price=self._decimal_to_payload(
+                    sell_price_decimal, effective_precision
+                ),
+                amount=self._decimal_to_payload(
+                    total_amount_decimal, effective_precision
+                ),
             )
 
             # 发送订单请求到正确的API端点
             response = await self._client.post(
                 f"{self.base_url}/bapi/asset/v1/private/alpha-trade/oto-order/place",
-                json=order_data
+                json=order_data,
             )
 
             if response.status_code == 200:
@@ -171,7 +187,9 @@ class BinanceOTOOrderClient:
             logger.error(f"OTO订单异常: {error_msg}")
             return False, error_msg, None
 
-    def _resolve_alpha_symbol(self, symbol: str, chain: str | None = None) -> ResolvedSymbol:
+    def _resolve_alpha_symbol(
+        self, symbol: str, chain: str | None = None
+    ) -> ResolvedSymbol:
         """解析交易对对应的Alpha交易符号及精度信息"""
 
         upper_symbol = symbol.upper()
@@ -188,7 +206,7 @@ class BinanceOTOOrderClient:
             quantity_precision=mapping.quantity_precision,
             lot_size=lot_size,
             price_filter=price_filter,
-            original_symbol=mapping.order_api_symbol
+            original_symbol=mapping.order_api_symbol,
         )
 
         return resolved
@@ -236,16 +254,13 @@ class BinanceOTOOrderClient:
         try:
             await self._ensure_client()
 
-            cancel_data = {
-                "symbol": symbol,
-                "orderId": order_id
-            }
+            cancel_data = {"symbol": symbol, "orderId": order_id}
 
             logger.info(f"取消订单: {symbol}, 订单ID: {order_id}")
 
             response = await self._client.post(
                 f"{self.base_url}/bapi/defi/v1/private/alpha-trade/order/cancel",
-                json=cancel_data
+                json=cancel_data,
             )
 
             if response.status_code == 200:
@@ -267,7 +282,9 @@ class BinanceOTOOrderClient:
             logger.error(f"取消订单异常: {error_msg}")
             return False, error_msg
 
-    async def get_order_status(self, symbol: str, order_id: str) -> tuple[bool, str, dict | None]:
+    async def get_order_status(
+        self, _symbol: str, order_id: str
+    ) -> tuple[bool, str, dict | None]:
         """查询订单状态
 
         注意：此接口不存在于私有API文档中。
@@ -276,10 +293,14 @@ class BinanceOTOOrderClient:
 
         此方法已废弃，保留仅为兼容性。实际使用时应使用 WebSocket 订阅订单更新。
         """
-        logger.warning(f"get_order_status 已废弃，订单状态应通过 WebSocket 获取: {order_id}")
+        logger.warning(
+            f"get_order_status 已废弃，订单状态应通过 WebSocket 获取: {order_id}"
+        )
         return False, "此接口已废弃，请使用 WebSocket 订阅订单状态", None
 
-    async def get_open_orders(self, symbol: str | None = None) -> tuple[bool, str, list | None]:
+    async def get_open_orders(
+        self, symbol: str | None = None
+    ) -> tuple[bool, str, list | None]:
         """获取未成交订单列表"""
         try:
             await self._ensure_client()
@@ -290,7 +311,7 @@ class BinanceOTOOrderClient:
 
             response = await self._client.get(
                 f"{self.base_url}/bapi/defi/v1/private/alpha-trade/order/get-open-order",
-                params=params
+                params=params,
             )
 
             if response.status_code == 200:
@@ -318,7 +339,7 @@ class BinanceOTOOrderClient:
         symbol: str | None = None,
         start_time: datetime | None = None,
         end_time: datetime | None = None,
-        limit: int = 100
+        limit: int = 100,
     ) -> tuple[bool, str, list | None]:
         """获取订单历史"""
         try:
@@ -334,7 +355,7 @@ class BinanceOTOOrderClient:
 
             response = await self._client.get(
                 f"{self.base_url}/bapi/defi/v1/private/alpha-trade/order/history",
-                params=params
+                params=params,
             )
 
             if response.status_code == 200:
@@ -369,7 +390,9 @@ class BinanceOTOOrderClient:
             "quantity": Decimal(str(order_data.get("origQty", "0"))),
             "executed_quantity": Decimal(str(order_data.get("executedQty", "0"))),
             "time": datetime.fromtimestamp(order_data.get("time", 0) / 1000),
-            "update_time": datetime.fromtimestamp(order_data.get("updateTime", 0) / 1000),
+            "update_time": datetime.fromtimestamp(
+                order_data.get("updateTime", 0) / 1000
+            ),
         }
 
     async def close(self):

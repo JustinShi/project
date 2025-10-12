@@ -9,18 +9,20 @@ from typing import Any
 
 class MetricType(str, Enum):
     """指标类型"""
-    COUNTER = "COUNTER"           # 计数器
-    GAUGE = "GAUGE"               # 仪表盘
-    HISTOGRAM = "HISTOGRAM"       # 直方图
-    TIMER = "TIMER"               # 计时器
+
+    COUNTER = "COUNTER"  # 计数器
+    GAUGE = "GAUGE"  # 仪表盘
+    HISTOGRAM = "HISTOGRAM"  # 直方图
+    TIMER = "TIMER"  # 计时器
 
 
 class MetricStatus(str, Enum):
     """指标状态"""
-    NORMAL = "NORMAL"             # 正常
-    WARNING = "WARNING"           # 警告
-    CRITICAL = "CRITICAL"         # 严重
-    UNKNOWN = "UNKNOWN"           # 未知
+
+    NORMAL = "NORMAL"  # 正常
+    WARNING = "WARNING"  # 警告
+    CRITICAL = "CRITICAL"  # 严重
+    UNKNOWN = "UNKNOWN"  # 未知
 
 
 @dataclass
@@ -56,9 +58,14 @@ class SystemMetric:
 
     def update_status(self) -> None:
         """更新指标状态"""
-        if self.threshold_critical is not None and self.value >= self.threshold_critical:
+        if (
+            self.threshold_critical is not None
+            and self.value >= self.threshold_critical
+        ):
             self.status = MetricStatus.CRITICAL
-        elif self.threshold_warning is not None and self.value >= self.threshold_warning:
+        elif (
+            self.threshold_warning is not None and self.value >= self.threshold_warning
+        ):
             self.status = MetricStatus.WARNING
         else:
             self.status = MetricStatus.NORMAL
@@ -72,13 +79,17 @@ class SystemMetric:
             "value": float(self.value),
             "unit": self.unit,
             "status": self.status.value,
-            "threshold_warning": float(self.threshold_warning) if self.threshold_warning else None,
-            "threshold_critical": float(self.threshold_critical) if self.threshold_critical else None,
+            "threshold_warning": float(self.threshold_warning)
+            if self.threshold_warning
+            else None,
+            "threshold_critical": float(self.threshold_critical)
+            if self.threshold_critical
+            else None,
             "tags": self.tags,
             "timestamp": self.timestamp.isoformat(),
             "is_healthy": self.is_healthy(),
             "is_warning": self.is_warning(),
-            "is_critical": self.is_critical()
+            "is_critical": self.is_critical(),
         }
 
 
@@ -120,7 +131,7 @@ class SystemHealth:
             "is_system_healthy": self.is_system_healthy(),
             "has_critical_issues": self.has_critical_issues(),
             "last_updated": self.last_updated.isoformat(),
-            "metrics": [metric.to_dict() for metric in self.metrics]
+            "metrics": [metric.to_dict() for metric in self.metrics],
         }
 
 
@@ -186,30 +197,30 @@ class PerformanceMetrics:
                 "response_time_p95": float(self.api_response_time_p95),
                 "response_time_p99": float(self.api_response_time_p99),
                 "requests_per_second": float(self.api_requests_per_second),
-                "error_rate": float(self.api_error_rate)
+                "error_rate": float(self.api_error_rate),
             },
             "database": {
                 "connection_pool_size": self.db_connection_pool_size,
                 "connection_pool_used": self.db_connection_pool_used,
                 "query_time_avg": float(self.db_query_time_avg),
                 "query_time_p95": float(self.db_query_time_p95),
-                "transactions_per_second": float(self.db_transactions_per_second)
+                "transactions_per_second": float(self.db_transactions_per_second),
             },
             "cache": {
                 "redis_hit_rate": float(self.redis_hit_rate),
                 "redis_memory_usage": float(self.redis_memory_usage),
-                "redis_operations_per_second": float(self.redis_operations_per_second)
+                "redis_operations_per_second": float(self.redis_operations_per_second),
             },
             "websocket": {
                 "connections": self.websocket_connections,
                 "messages_per_second": float(self.websocket_messages_per_second),
-                "reconnect_rate": float(self.websocket_reconnect_rate)
+                "reconnect_rate": float(self.websocket_reconnect_rate),
             },
             "system": {
                 "cpu_usage": float(self.cpu_usage),
                 "memory_usage": float(self.memory_usage),
                 "disk_usage": float(self.disk_usage),
-                "network_io": float(self.network_io)
+                "network_io": float(self.network_io),
             },
             "business": {
                 "active_users": self.active_users,
@@ -217,7 +228,7 @@ class PerformanceMetrics:
                 "orders_per_minute": float(self.orders_per_minute),
                 "successful_orders": self.successful_orders,
                 "failed_orders": self.failed_orders,
-                "success_rate": float(self.get_success_rate())
+                "success_rate": float(self.get_success_rate()),
             },
-            "timestamp": self.timestamp.isoformat()
+            "timestamp": self.timestamp.isoformat(),
         }

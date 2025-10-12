@@ -23,4 +23,3 @@ class Precision:
 
     def __str__(self) -> str:
         return f"Precision(trade={self.trade_decimal}, token={self.token_decimal})"
-

@@ -125,7 +125,7 @@ async def main() -> None:
 
   # 使用自定义配置文件
   python scripts/run_trading_strategy.py --config path/to/config.yaml
-        """
+        """,
     )
 
     parser.add_argument(

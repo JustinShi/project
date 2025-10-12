@@ -39,4 +39,3 @@ async def get_balance_service(
         余额服务实例
     """
     return BalanceService(user_repo)
-

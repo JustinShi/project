@@ -57,9 +57,7 @@ class Settings(BaseSettings):
     api_rate_limit_per_user: int = Field(
         default=10, description="每用户API请求频率限制（请求/秒）"
     )
-    api_rate_limit_period: int = Field(
-        default=1, description="API限流时间窗口（秒）"
-    )
+    api_rate_limit_period: int = Field(default=1, description="API限流时间窗口（秒）")
 
     # 价格波动监控配置
     price_volatility_window: int = Field(
@@ -92,4 +90,3 @@ class Settings(BaseSettings):
 def get_settings() -> Settings:
     """获取配置单例（缓存）"""
     return Settings()
-

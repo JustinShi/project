@@ -19,11 +19,7 @@ class OTOOrderExecutor:
         self.price_calculator = PriceCalculator()
 
     def can_execute_order(
-        self,
-        user_id: int,
-        symbol: str,
-        current_price: PriceData,
-        config: TradingTarget
+        self, user_id: int, symbol: str, current_price: PriceData, config: TradingTarget
     ) -> tuple[bool, str]:
         """检查是否可以执行订单"""
         # 检查用户是否有活跃订单
@@ -40,23 +36,17 @@ class OTOOrderExecutor:
         return True, "可以执行订单"
 
     def calculate_order_prices(
-        self,
-        current_price: PriceData,
-        config: TradingTarget
+        self, current_price: PriceData, config: TradingTarget
     ) -> tuple[Price, Price]:
         """计算订单价格"""
         # 计算买单价格（高价买入，快速成交）
         buy_price = self.price_calculator.calculate_buy_price(
-            current_price.price,
-            config.buy_offset_value,
-            config.price_offset_mode
+            current_price.price, config.buy_offset_value, config.price_offset_mode
         )
 
         # 计算卖单价格（低价卖出，快速成交）
         sell_price = self.price_calculator.calculate_sell_price(
-            current_price.price,
-            config.sell_offset_value,
-            config.price_offset_mode
+            current_price.price, config.sell_offset_value, config.price_offset_mode
         )
 
         return buy_price, sell_price
@@ -68,7 +58,7 @@ class OTOOrderExecutor:
         quantity: Decimal,
         buy_price: Price,
         sell_price: Price,
-        order_pair_id: int
+        order_pair_id: int,
     ) -> OTOOrderPair:
         """创建OTO订单对"""
         order_pair = OTOOrderPair(
@@ -78,7 +68,7 @@ class OTOOrderExecutor:
             quantity=quantity,
             buy_price=buy_price,
             sell_price=sell_price,
-            status=OTOOrderPairStatus.PENDING
+            status=OTOOrderPairStatus.PENDING,
         )
 
         # 添加到状态机
@@ -86,24 +76,18 @@ class OTOOrderExecutor:
 
         return order_pair
 
-    def update_buy_order(
-        self,
-        order_pair_id: int,
-        binance_order_id: str
-    ) -> bool:
+    def update_buy_order(self, order_pair_id: int, binance_order_id: str) -> bool:
         """更新买单信息"""
         order_pair = self.order_state_machine.get_order_pair(order_pair_id)
         if not order_pair:
             return False
 
-        order_pair.set_buy_order(binance_order_id, order_pair.buy_price, order_pair.quantity)
+        order_pair.set_buy_order(
+            binance_order_id, order_pair.buy_price, order_pair.quantity
+        )
         return True
 
-    def update_sell_order(
-        self,
-        order_pair_id: int,
-        binance_order_id: str
-    ) -> bool:
+    def update_sell_order(self, order_pair_id: int, binance_order_id: str) -> bool:
         """更新卖单信息"""
         order_pair = self.order_state_machine.get_order_pair(order_pair_id)
         if not order_pair:
@@ -128,7 +112,6 @@ class OTOOrderExecutor:
         """获取用户的活跃订单"""
         return self.order_state_machine.get_user_active_order(user_id)
 
-
     def get_order_statistics(self) -> dict:
         """获取订单统计"""
         return self.order_state_machine.get_order_statistics()
@@ -137,18 +120,16 @@ class OTOOrderExecutor:
         """清理超时订单"""
         return self.order_state_machine.cleanup_timeout_orders()
 
-    def _is_price_too_volatile(self, current_price: PriceData, config: TradingTarget) -> bool:
+    def _is_price_too_volatile(
+        self, current_price: PriceData, config: TradingTarget
+    ) -> bool:
         """检查价格是否过于波动"""
         # 这里需要从价格波动监控服务获取波动信息
         # 暂时返回False，实际实现需要集成价格波动监控
         return False
 
     def validate_order_parameters(
-        self,
-        symbol: str,
-        quantity: Decimal,
-        buy_price: Price,
-        sell_price: Price
+        self, symbol: str, quantity: Decimal, buy_price: Price, sell_price: Price
     ) -> tuple[bool, str]:
         """验证订单参数"""
         # 检查数量

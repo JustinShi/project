@@ -58,9 +58,7 @@ def get_redis_client() -> Redis:
         await redis.set("key", "value")
     """
     if _redis_client is None:
-        raise RuntimeError(
-            "Redis client not initialized. Call init_redis() first."
-        )
+        raise RuntimeError("Redis client not initialized. Call init_redis() first.")
     return _redis_client
 
 
@@ -70,4 +68,3 @@ async def close_redis() -> None:
     if _redis_client:
         await _redis_client.aclose()
         _redis_client = None
-

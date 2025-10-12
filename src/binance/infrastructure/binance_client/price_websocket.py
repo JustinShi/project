@@ -48,12 +48,20 @@ class PriceWebSocketConnector:
             return
 
         # 注册消息处理器
-        self._websocket_client.register_message_handler("aggTrade", self._handle_agg_trade)
+        self._websocket_client.register_message_handler(
+            "aggTrade", self._handle_agg_trade
+        )
 
         # 注册连接事件处理器
-        self._websocket_client.register_connection_handler("connected", self._on_connected)
-        self._websocket_client.register_connection_handler("disconnected", self._on_disconnected)
-        self._websocket_client.register_connection_handler("connection_failed", self._on_connection_failed)
+        self._websocket_client.register_connection_handler(
+            "connected", self._on_connected
+        )
+        self._websocket_client.register_connection_handler(
+            "disconnected", self._on_disconnected
+        )
+        self._websocket_client.register_connection_handler(
+            "connection_failed", self._on_connection_failed
+        )
 
         # 构建流名称
         stream_name = f"{self._symbol}@aggTrade"

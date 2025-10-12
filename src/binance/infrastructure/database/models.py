@@ -121,4 +121,3 @@ class PriceHistory(Base):
         CheckConstraint("price > 0", name="chk_price_positive"),
         Index("idx_price_symbol_timestamp", "symbol", "timestamp"),
     )
-

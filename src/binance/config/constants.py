@@ -94,4 +94,3 @@ BINANCE_WS_BASE_URL = "wss://nbstream.binance.com/lvt-p"
 
 # HTTP API基础URL
 BINANCE_API_BASE_URL = "https://www.binance.com"
-

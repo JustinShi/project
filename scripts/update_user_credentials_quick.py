@@ -28,12 +28,12 @@ async def main():
 
     # 获取 headers（单行字符串格式）
     print("请输入 headers (单行字符串格式):")
-    print('例如: csrftoken: xxx\\r\\nclienttype: ios\\r\\n...')
+    print("例如: csrftoken: xxx\\r\\nclienttype: ios\\r\\n...")
     print('或者从浏览器复制，格式类似: "key1: value1, key2: value2"')
     headers_str = input("> ").strip()
-    
+
     # 如果用户输入的是 JSON 格式，给出警告
-    if headers_str.startswith('{'):
+    if headers_str.startswith("{"):
         print("\n⚠️  警告: 检测到 JSON 格式的 headers")
         print("   HTTP 客户端需要单行字符串格式")
         print("   建议重新输入正确格式，或按 Ctrl+C 取消")
@@ -78,9 +78,9 @@ async def main():
     except Exception as e:
         print(f"\n❌ 更新失败: {e}")
         import traceback
+
         traceback.print_exc()
 
 
 if __name__ == "__main__":
     asyncio.run(main())
-

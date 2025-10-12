@@ -45,12 +45,15 @@ class NotificationService:
             f"已暂停 {len(affected_users)} 个用户的交易"
         )
 
-        logger.warning(message, extra={
-            "symbol": symbol,
-            "volatility_percentage": float(volatility_percentage),
-            "threshold": float(threshold),
-            "affected_users": affected_users,
-        })
+        logger.warning(
+            message,
+            extra={
+                "symbol": symbol,
+                "volatility_percentage": float(volatility_percentage),
+                "threshold": float(threshold),
+                "affected_users": affected_users,
+            },
+        )
 
         # TODO: 实现具体的通知逻辑（邮件、短信、推送等）
         for user_id in affected_users:
@@ -63,7 +66,7 @@ class NotificationService:
                     "symbol": symbol,
                     "volatility_percentage": float(volatility_percentage),
                     "threshold": float(threshold),
-                }
+                },
             )
 
     async def notify_insufficient_balance(
@@ -86,12 +89,15 @@ class NotificationService:
             f"需要 {required_amount} USDT，可用 {available_amount} USDT"
         )
 
-        logger.warning(message, extra={
-            "user_id": user_id,
-            "symbol": symbol,
-            "required_amount": float(required_amount),
-            "available_amount": float(available_amount),
-        })
+        logger.warning(
+            message,
+            extra={
+                "user_id": user_id,
+                "symbol": symbol,
+                "required_amount": float(required_amount),
+                "available_amount": float(available_amount),
+            },
+        )
 
         await self._send_user_notification(
             user_id=user_id,
@@ -102,7 +108,7 @@ class NotificationService:
                 "symbol": symbol,
                 "required_amount": float(required_amount),
                 "available_amount": float(available_amount),
-            }
+            },
         )
 
     async def notify_order_timeout(
@@ -125,12 +131,15 @@ class NotificationService:
             f"代币 {symbol} 订单 {order_id} 在 {timeout_seconds} 秒后超时"
         )
 
-        logger.warning(message, extra={
-            "user_id": user_id,
-            "symbol": symbol,
-            "order_id": order_id,
-            "timeout_seconds": timeout_seconds,
-        })
+        logger.warning(
+            message,
+            extra={
+                "user_id": user_id,
+                "symbol": symbol,
+                "order_id": order_id,
+                "timeout_seconds": timeout_seconds,
+            },
+        )
 
         await self._send_user_notification(
             user_id=user_id,
@@ -141,7 +150,7 @@ class NotificationService:
                 "symbol": symbol,
                 "order_id": order_id,
                 "timeout_seconds": timeout_seconds,
-            }
+            },
         )
 
     async def notify_websocket_disconnected(
@@ -156,14 +165,16 @@ class NotificationService:
             affected_users: 受影响的用户ID列表
         """
         message = (
-            f"WebSocket连接断开: {symbol}，"
-            f"已暂停 {len(affected_users)} 个用户的交易"
+            f"WebSocket连接断开: {symbol}，已暂停 {len(affected_users)} 个用户的交易"
         )
 
-        logger.error(message, extra={
-            "symbol": symbol,
-            "affected_users": affected_users,
-        })
+        logger.error(
+            message,
+            extra={
+                "symbol": symbol,
+                "affected_users": affected_users,
+            },
+        )
 
         for user_id in affected_users:
             await self._send_user_notification(
@@ -173,7 +184,7 @@ class NotificationService:
                 message=f"代币 {symbol} 价格连接断开，交易已暂停",
                 data={
                     "symbol": symbol,
-                }
+                },
             )
 
     async def notify_trading_paused(
@@ -191,11 +202,14 @@ class NotificationService:
         """
         message = f"用户 {user_id} 交易暂停: {reason}"
 
-        logger.info(message, extra={
-            "user_id": user_id,
-            "reason": reason,
-            "details": details,
-        })
+        logger.info(
+            message,
+            extra={
+                "user_id": user_id,
+                "reason": reason,
+                "details": details,
+            },
+        )
 
         await self._send_user_notification(
             user_id=user_id,
@@ -205,7 +219,7 @@ class NotificationService:
             data={
                 "reason": reason,
                 "details": details or {},
-            }
+            },
         )
 
     async def notify_trading_resumed(
@@ -221,10 +235,13 @@ class NotificationService:
         """
         message = f"用户 {user_id} 交易恢复: {symbol}"
 
-        logger.info(message, extra={
-            "user_id": user_id,
-            "symbol": symbol,
-        })
+        logger.info(
+            message,
+            extra={
+                "user_id": user_id,
+                "symbol": symbol,
+            },
+        )
 
         await self._send_user_notification(
             user_id=user_id,
@@ -233,7 +250,7 @@ class NotificationService:
             message=f"代币 {symbol} 交易已恢复",
             data={
                 "symbol": symbol,
-            }
+            },
         )
 
     async def _send_user_notification(

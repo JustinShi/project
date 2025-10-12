@@ -25,7 +25,7 @@ class HealthChecker:
             "redis": self._check_redis,
             "websocket": self._check_websocket,
             "security": self._check_security,
-            "system": self._check_system
+            "system": self._check_system,
         }
 
     async def _check_database(self, db_session) -> dict[str, Any]:
@@ -38,13 +38,13 @@ class HealthChecker:
             return {
                 "status": "healthy",
                 "message": "数据库连接正常",
-                "response_time_ms": 0  # 实际应用中应该测量响应时间
+                "response_time_ms": 0,  # 实际应用中应该测量响应时间
             }
         except Exception as e:
             return {
                 "status": "unhealthy",
                 "message": f"数据库连接失败: {e!s}",
-                "error": str(e)
+                "error": str(e),
             }
 
     async def _check_redis(self, redis_client) -> dict[str, Any]:
@@ -56,13 +56,13 @@ class HealthChecker:
             return {
                 "status": "healthy",
                 "message": "Redis连接正常",
-                "response_time_ms": 0
+                "response_time_ms": 0,
             }
         except Exception as e:
             return {
                 "status": "unhealthy",
                 "message": f"Redis连接失败: {e!s}",
-                "error": str(e)
+                "error": str(e),
             }
 
     async def _check_websocket(self) -> dict[str, Any]:
@@ -73,13 +73,13 @@ class HealthChecker:
             return {
                 "status": "healthy",
                 "message": "WebSocket连接正常",
-                "active_connections": 0  # 实际应用中应该获取真实连接数
+                "active_connections": 0,  # 实际应用中应该获取真实连接数
             }
         except Exception as e:
             return {
                 "status": "unhealthy",
                 "message": f"WebSocket连接失败: {e!s}",
-                "error": str(e)
+                "error": str(e),
             }
 
     async def _check_security(self) -> dict[str, Any]:
@@ -88,16 +88,12 @@ class HealthChecker:
             security_service = SecurityService()
             summary = security_service.get_security_summary()
 
-            return {
-                "status": "healthy",
-                "message": "安全服务正常",
-                "details": summary
-            }
+            return {"status": "healthy", "message": "安全服务正常", "details": summary}
         except Exception as e:
             return {
                 "status": "unhealthy",
                 "message": f"安全服务异常: {e!s}",
-                "error": str(e)
+                "error": str(e),
             }
 
     async def _check_system(self) -> dict[str, Any]:
@@ -133,20 +129,20 @@ class HealthChecker:
                     "cpu_percent": cpu_percent,
                     "memory_percent": memory.percent,
                     "disk_percent": disk.percent,
-                    "warnings": warnings
-                }
+                    "warnings": warnings,
+                },
             }
         except ImportError:
             return {
                 "status": "warning",
                 "message": "psutil未安装，无法检查系统资源",
-                "details": {}
+                "details": {},
             }
         except Exception as e:
             return {
                 "status": "unhealthy",
                 "message": f"系统资源检查失败: {e!s}",
-                "error": str(e)
+                "error": str(e),
             }
 
     async def run_all_checks(self, db_session, redis_client) -> dict[str, Any]:
@@ -191,21 +187,20 @@ class HealthChecker:
                 results[name] = {
                     "status": "unhealthy",
                     "message": f"检查异常: {e!s}",
-                    "error": str(e)
+                    "error": str(e),
                 }
                 overall_status = "unhealthy"
 
         return {
             "overall_status": overall_status,
             "timestamp": datetime.now().isoformat(),
-            "checks": results
+            "checks": results,
         }
 
 
 @router.get("/")
 async def health_check(
-    db: Any = Depends(get_db_session),
-    redis: Any = Depends(get_redis_client)
+    db: Any = Depends(get_db_session), redis: Any = Depends(get_redis_client)
 ):
     """基础健康检查"""
     try:
@@ -213,7 +208,10 @@ async def health_check(
         result = await checker.run_all_checks(db, redis)
 
         # 根据整体状态返回相应的HTTP状态码
-        if result["overall_status"] == "healthy" or result["overall_status"] == "warning":
+        if (
+            result["overall_status"] == "healthy"
+            or result["overall_status"] == "warning"
+        ):
             return result
         else:
             raise HTTPException(status_code=503, detail=result)
@@ -310,8 +308,7 @@ async def system_health():
 
 @router.get("/detailed")
 async def detailed_health_check(
-    db: Any = Depends(get_db_session),
-    redis: Any = Depends(get_redis_client)
+    db: Any = Depends(get_db_session), redis: Any = Depends(get_redis_client)
 ):
     """详细健康检查"""
     try:
@@ -342,8 +339,8 @@ async def health_metrics():
                 "health_checks_passed": 4,
                 "health_checks_failed": 1,
                 "response_time_avg_ms": 50,
-                "uptime_seconds": 86400
-            }
+                "uptime_seconds": 86400,
+            },
         }
 
     except Exception as e:

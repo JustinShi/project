@@ -44,9 +44,7 @@ class ListenKeyManager:
                         cookies_dict[key] = value
 
             self._client = httpx.AsyncClient(
-                headers=self.headers,
-                cookies=cookies_dict,
-                timeout=30.0
+                headers=self.headers, cookies=cookies_dict, timeout=30.0
             )
 
     async def get_listen_key(self) -> tuple[bool, str, str | None]:
@@ -155,7 +153,7 @@ class ListenKeyManager:
 
             response = await self._client.put(
                 f"{self.base_url}/bapi/defi/v1/private/alpha-trade/userDataStream",
-                params={"listenKey": self._listen_key}
+                params={"listenKey": self._listen_key},
             )
 
             if response.status_code == 200:
@@ -219,9 +217,12 @@ class ListenKeyManager:
         """获取ListenKey信息"""
         return {
             "listen_key": self._listen_key,
-            "expires_at": self._key_expires_at.isoformat() if self._key_expires_at else None,
+            "expires_at": self._key_expires_at.isoformat()
+            if self._key_expires_at
+            else None,
             "is_valid": self.is_key_valid(),
-            "keep_alive_running": self._keep_alive_task is not None and not self._keep_alive_task.done()
+            "keep_alive_running": self._keep_alive_task is not None
+            and not self._keep_alive_task.done(),
         }
 
     async def close(self):

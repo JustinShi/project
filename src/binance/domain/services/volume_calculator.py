@@ -14,7 +14,7 @@ class VolumeCalculator:
         target_volume: Decimal,
         current_volume: Decimal,
         single_order_amount: Decimal,
-        multiplier: Decimal = Decimal("1")
+        multiplier: Decimal = Decimal("1"),
     ) -> int:
         """计算达到目标交易量所需的循环次数
 
@@ -53,14 +53,15 @@ class VolumeCalculator:
         remaining_volume = target_volume - actual_current_volume
 
         # 计算所需循环次数（向上取整）
-        cycles = (remaining_volume / single_order_amount).to_integral_value(rounding=ROUND_UP)
+        cycles = (remaining_volume / single_order_amount).to_integral_value(
+            rounding=ROUND_UP
+        )
 
         return int(cycles)
 
     @staticmethod
     def calculate_actual_volume(
-        api_volume: Decimal,
-        multiplier: Decimal = Decimal("1")
+        api_volume: Decimal, multiplier: Decimal = Decimal("1")
     ) -> Decimal:
         """计算实际交易量（考虑积分倍数）
 
@@ -83,7 +84,7 @@ class VolumeCalculator:
     def calculate_remaining_volume(
         target_volume: Decimal,
         current_volume: Decimal,
-        multiplier: Decimal = Decimal("1")
+        multiplier: Decimal = Decimal("1"),
     ) -> Decimal:
         """计算剩余需要交易的量
 
@@ -95,7 +96,9 @@ class VolumeCalculator:
         Returns:
             剩余交易量
         """
-        actual_current_volume = VolumeCalculator.calculate_actual_volume(current_volume, multiplier)
+        actual_current_volume = VolumeCalculator.calculate_actual_volume(
+            current_volume, multiplier
+        )
 
         if actual_current_volume >= target_volume:
             return Decimal("0")
@@ -106,7 +109,7 @@ class VolumeCalculator:
     def calculate_progress_percentage(
         target_volume: Decimal,
         current_volume: Decimal,
-        multiplier: Decimal = Decimal("1")
+        multiplier: Decimal = Decimal("1"),
     ) -> Decimal:
         """计算交易进度百分比
 
@@ -121,7 +124,9 @@ class VolumeCalculator:
         if target_volume <= 0:
             return Decimal("0")
 
-        actual_current_volume = VolumeCalculator.calculate_actual_volume(current_volume, multiplier)
+        actual_current_volume = VolumeCalculator.calculate_actual_volume(
+            current_volume, multiplier
+        )
         progress = (actual_current_volume / target_volume) * Decimal("100")
 
         # 限制在0-100之间
@@ -131,4 +136,3 @@ class VolumeCalculator:
             return Decimal("100")
 
         return progress
-

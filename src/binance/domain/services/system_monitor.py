@@ -20,6 +20,7 @@ from binance.domain.entities.system_metrics import (
 @dataclass
 class SystemStatus:
     """系统状态"""
+
     status: str
     uptime: int  # 运行时间（秒）
     version: str
@@ -51,7 +52,9 @@ class SystemMonitor:
         """获取所有系统指标"""
         return list(self._metrics.values())
 
-    def update_metric(self, name: str, value: Decimal, timestamp: datetime | None = None) -> None:
+    def update_metric(
+        self, name: str, value: Decimal, timestamp: datetime | None = None
+    ) -> None:
         """更新系统指标"""
         if name in self._metrics:
             metric = self._metrics[name]
@@ -87,7 +90,7 @@ class SystemMonitor:
             critical_metrics=critical_count,
             total_metrics=total_count,
             last_updated=datetime.now(),
-            metrics=metrics
+            metrics=metrics,
         )
 
     def add_alert_rule(self, rule: AlertRule) -> None:
@@ -105,10 +108,11 @@ class SystemMonitor:
     def _check_alert_rules(self, metric: SystemMetric) -> None:
         """检查告警规则"""
         for rule in self._alert_rules.values():
-            if (rule.metric_name == metric.name and
-                rule.is_active() and
-                rule.should_trigger(metric.value, metric.timestamp)):
-
+            if (
+                rule.metric_name == metric.name
+                and rule.is_active()
+                and rule.should_trigger(metric.value, metric.timestamp)
+            ):
                 # 创建告警
                 alert = SystemAlert(
                     id=len(self._active_alerts) + 1,
@@ -117,7 +121,7 @@ class SystemMonitor:
                     metric_value=metric.value,
                     severity=rule.severity,
                     message=rule.get_alert_message(metric.value),
-                    triggered_at=datetime.now()
+                    triggered_at=datetime.now(),
                 )
 
                 self._active_alerts.append(alert)
@@ -150,17 +154,13 @@ class SystemMonitor:
         # 只保留最近24小时的数据
         cutoff_time = datetime.now() - timedelta(hours=24)
         self._performance_history = [
-            m for m in self._performance_history
-            if m.timestamp >= cutoff_time
+            m for m in self._performance_history if m.timestamp >= cutoff_time
         ]
 
     def get_performance_metrics(self, hours: int = 1) -> list[PerformanceMetrics]:
         """获取性能指标历史"""
         cutoff_time = datetime.now() - timedelta(hours=hours)
-        return [
-            m for m in self._performance_history
-            if m.timestamp >= cutoff_time
-        ]
+        return [m for m in self._performance_history if m.timestamp >= cutoff_time]
 
     def get_system_status(self) -> SystemStatus:
         """获取系统状态"""
@@ -171,7 +171,7 @@ class SystemMonitor:
                 version="1.0.0",
                 environment="development",
                 last_restart=datetime.now(),
-                health_score=100.0
+                health_score=100.0,
             )
 
         # 更新健康分数
@@ -190,7 +190,7 @@ class SystemMonitor:
                 value=Decimal("100.0"),
                 unit="ms",
                 threshold_warning=Decimal("500.0"),
-                threshold_critical=Decimal("1000.0")
+                threshold_critical=Decimal("1000.0"),
             ),
             SystemMetric(
                 id=2,
@@ -199,7 +199,7 @@ class SystemMonitor:
                 value=Decimal("0.1"),
                 unit="%",
                 threshold_warning=Decimal("5.0"),
-                threshold_critical=Decimal("10.0")
+                threshold_critical=Decimal("10.0"),
             ),
             SystemMetric(
                 id=3,
@@ -208,7 +208,7 @@ class SystemMonitor:
                 value=Decimal("5.0"),
                 unit="connections",
                 threshold_warning=Decimal("80.0"),
-                threshold_critical=Decimal("95.0")
+                threshold_critical=Decimal("95.0"),
             ),
             SystemMetric(
                 id=4,
@@ -217,7 +217,7 @@ class SystemMonitor:
                 value=Decimal("50.0"),
                 unit="%",
                 threshold_warning=Decimal("80.0"),
-                threshold_critical=Decimal("95.0")
+                threshold_critical=Decimal("95.0"),
             ),
             SystemMetric(
                 id=5,
@@ -226,7 +226,7 @@ class SystemMonitor:
                 value=Decimal("10.0"),
                 unit="connections",
                 threshold_warning=Decimal("100.0"),
-                threshold_critical=Decimal("200.0")
+                threshold_critical=Decimal("200.0"),
             ),
             SystemMetric(
                 id=6,
@@ -235,7 +235,7 @@ class SystemMonitor:
                 value=Decimal("30.0"),
                 unit="%",
                 threshold_warning=Decimal("80.0"),
-                threshold_critical=Decimal("95.0")
+                threshold_critical=Decimal("95.0"),
             ),
             SystemMetric(
                 id=7,
@@ -244,7 +244,7 @@ class SystemMonitor:
                 value=Decimal("40.0"),
                 unit="%",
                 threshold_warning=Decimal("80.0"),
-                threshold_critical=Decimal("95.0")
+                threshold_critical=Decimal("95.0"),
             ),
             SystemMetric(
                 id=8,
@@ -253,7 +253,7 @@ class SystemMonitor:
                 value=Decimal("5.0"),
                 unit="users",
                 threshold_warning=Decimal("100.0"),
-                threshold_critical=Decimal("200.0")
+                threshold_critical=Decimal("200.0"),
             ),
             SystemMetric(
                 id=9,
@@ -262,7 +262,7 @@ class SystemMonitor:
                 value=Decimal("2.0"),
                 unit="orders",
                 threshold_warning=Decimal("50.0"),
-                threshold_critical=Decimal("100.0")
+                threshold_critical=Decimal("100.0"),
             ),
             SystemMetric(
                 id=10,
@@ -271,8 +271,8 @@ class SystemMonitor:
                 value=Decimal("95.0"),
                 unit="%",
                 threshold_warning=Decimal("90.0"),
-                threshold_critical=Decimal("80.0")
-            )
+                threshold_critical=Decimal("80.0"),
+            ),
         ]
 
         for metric in default_metrics:
@@ -290,7 +290,7 @@ class SystemMonitor:
                 metric_type=MetricType.TIMER,
                 threshold_value=Decimal("1000.0"),
                 threshold_operator=">",
-                severity=MetricStatus.CRITICAL
+                severity=MetricStatus.CRITICAL,
             ),
             AlertRule(
                 id=2,
@@ -301,7 +301,7 @@ class SystemMonitor:
                 metric_type=MetricType.GAUGE,
                 threshold_value=Decimal("10.0"),
                 threshold_operator=">",
-                severity=MetricStatus.CRITICAL
+                severity=MetricStatus.CRITICAL,
             ),
             AlertRule(
                 id=3,
@@ -312,7 +312,7 @@ class SystemMonitor:
                 metric_type=MetricType.GAUGE,
                 threshold_value=Decimal("90.0"),
                 threshold_operator=">",
-                severity=MetricStatus.WARNING
+                severity=MetricStatus.WARNING,
             ),
             AlertRule(
                 id=4,
@@ -323,7 +323,7 @@ class SystemMonitor:
                 metric_type=MetricType.GAUGE,
                 threshold_value=Decimal("90.0"),
                 threshold_operator=">",
-                severity=MetricStatus.WARNING
+                severity=MetricStatus.WARNING,
             ),
             AlertRule(
                 id=5,
@@ -334,7 +334,7 @@ class SystemMonitor:
                 metric_type=MetricType.GAUGE,
                 threshold_value=Decimal("90.0"),
                 threshold_operator=">",
-                severity=MetricStatus.CRITICAL
+                severity=MetricStatus.CRITICAL,
             ),
             AlertRule(
                 id=6,
@@ -345,7 +345,7 @@ class SystemMonitor:
                 metric_type=MetricType.GAUGE,
                 threshold_value=Decimal("90.0"),
                 threshold_operator=">",
-                severity=MetricStatus.CRITICAL
+                severity=MetricStatus.CRITICAL,
             ),
             AlertRule(
                 id=7,
@@ -356,8 +356,8 @@ class SystemMonitor:
                 metric_type=MetricType.GAUGE,
                 threshold_value=Decimal("80.0"),
                 threshold_operator="<",
-                severity=MetricStatus.WARNING
-            )
+                severity=MetricStatus.WARNING,
+            ),
         ]
 
         for rule in default_rules:
@@ -376,17 +376,23 @@ class SystemMonitor:
                 "uptime": status.uptime,
                 "version": status.version,
                 "environment": status.environment,
-                "health_score": status.health_score
+                "health_score": status.health_score,
             },
             "health": health.to_dict(),
             "alerts": {
                 "active_count": len(active_alerts),
-                "critical_count": len([a for a in active_alerts if a.severity == MetricStatus.CRITICAL]),
-                "warning_count": len([a for a in active_alerts if a.severity == MetricStatus.WARNING])
+                "critical_count": len(
+                    [a for a in active_alerts if a.severity == MetricStatus.CRITICAL]
+                ),
+                "warning_count": len(
+                    [a for a in active_alerts if a.severity == MetricStatus.WARNING]
+                ),
             },
             "performance": {
                 "metrics_count": len(performance_metrics),
-                "latest_metrics": performance_metrics[-1].to_dict() if performance_metrics else None
+                "latest_metrics": performance_metrics[-1].to_dict()
+                if performance_metrics
+                else None,
             },
-            "timestamp": datetime.now().isoformat()
+            "timestamp": datetime.now().isoformat(),
         }

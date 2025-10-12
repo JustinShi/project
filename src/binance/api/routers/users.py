@@ -105,4 +105,3 @@ async def get_user_volume(
             raise HTTPException(status_code=404, detail=error_msg)
         else:
             raise HTTPException(status_code=400, detail=error_msg)
-

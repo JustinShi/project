@@ -24,7 +24,7 @@ class OrderWebSocketConnector:
         on_order_update: Callable[[dict[str, Any]], None],
         on_connection_event: Callable[[str, dict], None] | None = None,
         reconnect_interval: int = 30,
-        max_reconnect_attempts: int = 10
+        max_reconnect_attempts: int = 10,
     ):
         self.user_id = user_id
         self.listen_key = listen_key
@@ -90,7 +90,7 @@ class OrderWebSocketConnector:
             subscribe_msg = {
                 "method": "SUBSCRIBE",
                 "params": [f"alpha@{self.listen_key}"],
-                "id": 1
+                "id": 1,
             }
             await self._websocket.send(json.dumps(subscribe_msg))
             logger.info(f"已发送订阅消息: {subscribe_msg}")
@@ -183,19 +183,19 @@ class OrderWebSocketConnector:
             order_info = {
                 "user_id": self.user_id,
                 "order_id": data.get("i"),  # 订单ID
-                "symbol": data.get("s"),    # 交易对
-                "side": data.get("S"),      # 买卖方向
-                "type": data.get("o"),      # 订单类型
-                "status": data.get("X"),     # 订单状态
-                "price": data.get("p"),      # 价格
-                "quantity": data.get("q"),   # 数量
+                "symbol": data.get("s"),  # 交易对
+                "side": data.get("S"),  # 买卖方向
+                "type": data.get("o"),  # 订单类型
+                "status": data.get("X"),  # 订单状态
+                "price": data.get("p"),  # 价格
+                "quantity": data.get("q"),  # 数量
                 "executed_quantity": data.get("z"),  # 已执行数量
-                "time": data.get("T"),      # 时间戳
-                "client_order_id": data.get("c"),    # 客户端订单ID
-                "execution_type": data.get("x"),     # 执行类型
-                "order_reject_reason": data.get("r"), # 拒绝原因
-                "commission": data.get("n"),         # 手续费
-                "commission_asset": data.get("N"),   # 手续费资产
+                "time": data.get("T"),  # 时间戳
+                "client_order_id": data.get("c"),  # 客户端订单ID
+                "execution_type": data.get("x"),  # 执行类型
+                "order_reject_reason": data.get("r"),  # 拒绝原因
+                "commission": data.get("n"),  # 手续费
+                "commission_asset": data.get("N"),  # 手续费资产
             }
 
             logger.info(f"订单执行报告: {order_info}")
@@ -252,9 +252,13 @@ class OrderWebSocketConnector:
             return
 
         self._reconnect_attempts += 1
-        wait_time = min(self.reconnect_interval * self._reconnect_attempts, 300)  # 最大5分钟
+        wait_time = min(
+            self.reconnect_interval * self._reconnect_attempts, 300
+        )  # 最大5分钟
 
-        logger.info(f"订单WebSocket重连尝试 {self._reconnect_attempts}/{self.max_reconnect_attempts}, 等待 {wait_time} 秒")
+        logger.info(
+            f"订单WebSocket重连尝试 {self._reconnect_attempts}/{self.max_reconnect_attempts}, 等待 {wait_time} 秒"
+        )
 
         await asyncio.sleep(wait_time)
 
@@ -269,8 +273,9 @@ class OrderWebSocketConnector:
         try:
             # ClientConnection 对象有 state 属性，State.OPEN 表示连接中
             from websockets.protocol import State
+
             return self._websocket.state == State.OPEN
-        except:
+        except Exception:
             # 如果检查失败，看监听任务是否还在运行
             return self._listen_task is not None and not self._listen_task.done()
 

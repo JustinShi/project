@@ -37,14 +37,16 @@ class SecurityMiddleware(BaseHTTPMiddleware):
         if user_id:
             allowed, message = self.security_service.check_rate_limit(user_id, endpoint)
             if not allowed:
-                logger.warning(f"频率限制: 用户 {user_id} 访问 {endpoint} 被限制 - {message}")
+                logger.warning(
+                    f"频率限制: 用户 {user_id} 访问 {endpoint} 被限制 - {message}"
+                )
                 return JSONResponse(
                     status_code=429,
                     content={
                         "error": "Too Many Requests",
                         "message": message,
-                        "retry_after": 60
-                    }
+                        "retry_after": 60,
+                    },
                 )
 
         # 记录请求开始
@@ -67,7 +69,9 @@ class SecurityMiddleware(BaseHTTPMiddleware):
             response.headers["X-Content-Type-Options"] = "nosniff"
             response.headers["X-Frame-Options"] = "DENY"
             response.headers["X-XSS-Protection"] = "1; mode=block"
-            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+            response.headers["Strict-Transport-Security"] = (
+                "max-age=31536000; includeSubDomains"
+            )
             response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
 
             # 记录审计日志
@@ -82,15 +86,19 @@ class SecurityMiddleware(BaseHTTPMiddleware):
                         "status_code": response.status_code,
                         "process_time": process_time,
                         "user_agent": request.headers.get("user-agent", ""),
-                        "ip_address": request.client.host if request.client else "unknown"
-                    }
+                        "ip_address": request.client.host
+                        if request.client
+                        else "unknown",
+                    },
                 )
 
             return response
 
         except Exception as e:
             # 记录错误
-            logger.error(f"请求异常: {request.method} {request.url.path} - {e!s} - 用户 {user_id}")
+            logger.error(
+                f"请求异常: {request.method} {request.url.path} - {e!s} - 用户 {user_id}"
+            )
 
             # 记录审计日志
             if user_id:
@@ -103,17 +111,16 @@ class SecurityMiddleware(BaseHTTPMiddleware):
                         "path": request.url.path,
                         "error": str(e),
                         "user_agent": request.headers.get("user-agent", ""),
-                        "ip_address": request.client.host if request.client else "unknown"
-                    }
+                        "ip_address": request.client.host
+                        if request.client
+                        else "unknown",
+                    },
                 )
 
             # 返回通用错误响应
             return JSONResponse(
                 status_code=500,
-                content={
-                    "error": "Internal Server Error",
-                    "message": "服务器内部错误"
-                }
+                content={"error": "Internal Server Error", "message": "服务器内部错误"},
             )
 
     def _extract_user_id(self, request: Request) -> int:
@@ -165,8 +172,8 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 content={
                     "error": "Too Many Requests",
                     "message": message,
-                    "retry_after": 60
-                }
+                    "retry_after": 60,
+                },
             )
 
         return await call_next(request)
@@ -212,8 +219,8 @@ class AuditMiddleware(BaseHTTPMiddleware):
                 "path": request.url.path,
                 "query_params": dict(request.query_params),
                 "user_agent": request.headers.get("user-agent", ""),
-                "ip_address": request.client.host if request.client else "unknown"
-            }
+                "ip_address": request.client.host if request.client else "unknown",
+            },
         )
 
         try:
@@ -227,8 +234,8 @@ class AuditMiddleware(BaseHTTPMiddleware):
                 details={
                     "method": request.method,
                     "path": request.url.path,
-                    "status_code": response.status_code
-                }
+                    "status_code": response.status_code,
+                },
             )
 
             return response
@@ -242,8 +249,8 @@ class AuditMiddleware(BaseHTTPMiddleware):
                 details={
                     "method": request.method,
                     "path": request.url.path,
-                    "error": str(e)
-                }
+                    "error": str(e),
+                },
             )
             raise
 

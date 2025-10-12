@@ -8,14 +8,20 @@ from pydantic import BaseModel, Field
 
 class OrderExecuteRequest(BaseModel):
     """订单执行请求"""
+
     symbol: str = Field(..., description="交易对符号", example="kogeusdt")
     quantity: Decimal = Field(..., description="订单数量", example=100.0)
-    buy_offset_percentage: Decimal = Field(..., description="买单价格偏移百分比", example=0.1)
-    sell_offset_percentage: Decimal = Field(..., description="卖单价格偏移百分比", example=0.1)
+    buy_offset_percentage: Decimal = Field(
+        ..., description="买单价格偏移百分比", example=0.1
+    )
+    sell_offset_percentage: Decimal = Field(
+        ..., description="卖单价格偏移百分比", example=0.1
+    )
 
 
 class OrderExecuteResponse(BaseModel):
     """订单执行响应"""
+
     success: bool = Field(..., description="执行是否成功")
     message: str = Field(..., description="执行消息")
     order_pair_id: int | None = Field(None, description="订单对ID")
@@ -29,6 +35,7 @@ class OrderExecuteResponse(BaseModel):
 
 class OrderStatusResponse(BaseModel):
     """订单状态响应"""
+
     order_pair_id: int = Field(..., description="订单对ID")
     user_id: int = Field(..., description="用户ID")
     symbol: str = Field(..., description="交易对符号")
@@ -44,17 +51,20 @@ class OrderStatusResponse(BaseModel):
 
 class OrderCancelRequest(BaseModel):
     """订单取消请求"""
+
     order_pair_id: int = Field(..., description="订单对ID")
 
 
 class OrderCancelResponse(BaseModel):
     """订单取消响应"""
+
     success: bool = Field(..., description="取消是否成功")
     message: str = Field(..., description="取消消息")
 
 
 class OrderStatisticsResponse(BaseModel):
     """订单统计响应"""
+
     total_orders: int = Field(..., description="总订单数")
     pending_orders: int = Field(..., description="等待中订单数")
     buy_filled_orders: int = Field(..., description="买单已成交订单数")
@@ -64,6 +74,7 @@ class OrderStatisticsResponse(BaseModel):
 
 class OrderListResponse(BaseModel):
     """订单列表响应"""
+
     orders: list[OrderStatusResponse] = Field(..., description="订单列表")
     total: int = Field(..., description="总数量")
     page: int = Field(..., description="当前页码")
@@ -72,6 +83,7 @@ class OrderListResponse(BaseModel):
 
 class WebSocketStatusResponse(BaseModel):
     """WebSocket状态响应"""
+
     user_id: int = Field(..., description="用户ID")
     connected: bool = Field(..., description="是否已连接")
     listen_key: str | None = Field(None, description="ListenKey")
@@ -81,6 +93,7 @@ class WebSocketStatusResponse(BaseModel):
 
 class OrderMonitorResponse(BaseModel):
     """订单监控响应"""
+
     user_id: int = Field(..., description="用户ID")
     active_orders: list[OrderStatusResponse] = Field(..., description="活跃订单列表")
     websocket_status: WebSocketStatusResponse = Field(..., description="WebSocket状态")

@@ -72,4 +72,3 @@ async def close_db() -> None:
     global _engine
     if _engine:
         await _engine.dispose()
-

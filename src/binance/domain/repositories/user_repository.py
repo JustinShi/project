@@ -55,4 +55,3 @@ class UserRepository(ABC):
             更新后的用户实体
         """
         pass
-

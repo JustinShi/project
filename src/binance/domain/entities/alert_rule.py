@@ -11,17 +11,19 @@ from binance.domain.entities.system_metrics import MetricStatus, MetricType
 
 class AlertRuleType(str, Enum):
     """告警规则类型"""
-    THRESHOLD = "THRESHOLD"           # 阈值告警
-    RATE_CHANGE = "RATE_CHANGE"       # 变化率告警
-    ABSENCE = "ABSENCE"               # 缺失告警
-    ANOMALY = "ANOMALY"               # 异常告警
+
+    THRESHOLD = "THRESHOLD"  # 阈值告警
+    RATE_CHANGE = "RATE_CHANGE"  # 变化率告警
+    ABSENCE = "ABSENCE"  # 缺失告警
+    ANOMALY = "ANOMALY"  # 异常告警
 
 
 class AlertRuleStatus(str, Enum):
     """告警规则状态"""
-    ACTIVE = "ACTIVE"                 # 活跃
-    INACTIVE = "INACTIVE"            # 非活跃
-    DISABLED = "DISABLED"             # 禁用
+
+    ACTIVE = "ACTIVE"  # 活跃
+    INACTIVE = "INACTIVE"  # 非活跃
+    DISABLED = "DISABLED"  # 禁用
 
 
 @dataclass
@@ -147,7 +149,7 @@ class AlertRule:
                 metric_name=self.metric_name,
                 metric_value=metric_value,
                 threshold_value=self.threshold_value,
-                severity=self.severity.value
+                severity=self.severity.value,
             )
 
         if self.rule_type == AlertRuleType.THRESHOLD:
@@ -170,10 +172,14 @@ class AlertRule:
             "rule_type": self.rule_type.value,
             "metric_name": self.metric_name,
             "metric_type": self.metric_type.value,
-            "threshold_value": float(self.threshold_value) if self.threshold_value else None,
+            "threshold_value": float(self.threshold_value)
+            if self.threshold_value
+            else None,
             "threshold_operator": self.threshold_operator,
             "threshold_duration": self.threshold_duration,
-            "rate_threshold": float(self.rate_threshold) if self.rate_threshold else None,
+            "rate_threshold": float(self.rate_threshold)
+            if self.rate_threshold
+            else None,
             "rate_window": self.rate_window,
             "absence_duration": self.absence_duration,
             "anomaly_sensitivity": float(self.anomaly_sensitivity),
@@ -185,9 +191,11 @@ class AlertRule:
             "notification_template": self.notification_template,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
-            "last_triggered": self.last_triggered.isoformat() if self.last_triggered else None,
+            "last_triggered": self.last_triggered.isoformat()
+            if self.last_triggered
+            else None,
             "trigger_count": self.trigger_count,
-            "is_active": self.is_active()
+            "is_active": self.is_active(),
         }
 
 
@@ -238,9 +246,11 @@ class SystemAlert:
             "severity": self.severity.value,
             "message": self.message,
             "triggered_at": self.triggered_at.isoformat(),
-            "acknowledged_at": self.acknowledged_at.isoformat() if self.acknowledged_at else None,
+            "acknowledged_at": self.acknowledged_at.isoformat()
+            if self.acknowledged_at
+            else None,
             "resolved_at": self.resolved_at.isoformat() if self.resolved_at else None,
             "status": self.status,
             "duration_seconds": self.get_duration(),
-            "is_active": self.is_active()
+            "is_active": self.is_active(),
         }

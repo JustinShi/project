@@ -16,6 +16,7 @@ logger = get_logger(__name__)
 @dataclass
 class SecurityConfig:
     """安全配置"""
+
     # API访问控制
     max_requests_per_minute: int = 60
     max_requests_per_hour: int = 1000
@@ -53,7 +54,8 @@ class SecurityService:
         # 清理过期记录
         if key in self._rate_limits:
             self._rate_limits[key] = [
-                timestamp for timestamp in self._rate_limits[key]
+                timestamp
+                for timestamp in self._rate_limits[key]
                 if now - timestamp < timedelta(days=1)
             ]
         else:
@@ -66,7 +68,10 @@ class SecurityService:
         minute_ago = now - timedelta(minutes=1)
         minute_requests = [r for r in recent_requests if r > minute_ago]
         if len(minute_requests) >= self.config.max_requests_per_minute:
-            return False, f"每分钟请求次数超过限制 {self.config.max_requests_per_minute}"
+            return (
+                False,
+                f"每分钟请求次数超过限制 {self.config.max_requests_per_minute}",
+            )
 
         # 每小时限制
         hour_ago = now - timedelta(hours=1)
@@ -158,14 +163,18 @@ class SecurityService:
     def hash_password(self, password: str) -> str:
         """哈希密码"""
         salt = secrets.token_hex(16)
-        hash_obj = hashlib.pbkdf2_hmac("sha256", password.encode(), salt.encode(), 100000)
+        hash_obj = hashlib.pbkdf2_hmac(
+            "sha256", password.encode(), salt.encode(), 100000
+        )
         return f"{salt}:{hash_obj.hex()}"
 
     def verify_password(self, password: str, hashed: str) -> bool:
         """验证密码"""
         try:
             salt, hash_hex = hashed.split(":", 1)
-            hash_obj = hashlib.pbkdf2_hmac("sha256", password.encode(), salt.encode(), 100000)
+            hash_obj = hashlib.pbkdf2_hmac(
+                "sha256", password.encode(), salt.encode(), 100000
+            )
             return hash_obj.hex() == hash_hex
         except ValueError:
             return False
@@ -176,7 +185,7 @@ class SecurityService:
         action: str,
         resource: str,
         details: dict[str, Any] | None = None,
-        sensitive_data: dict[str, Any] | None = None
+        sensitive_data: dict[str, Any] | None = None,
     ) -> None:
         """记录审计日志"""
         if not self.config.audit_all_operations:
@@ -210,7 +219,7 @@ class SecurityService:
         action: str | None = None,
         start_time: datetime | None = None,
         end_time: datetime | None = None,
-        limit: int = 100
+        limit: int = 100,
     ) -> list[dict[str, Any]]:
         """获取审计日志"""
         logs = self._audit_logs.copy()
@@ -223,17 +232,27 @@ class SecurityService:
             logs = [log for log in logs if log.get("action") == action]
 
         if start_time is not None:
-            logs = [log for log in logs if datetime.fromisoformat(log["timestamp"]) >= start_time]
+            logs = [
+                log
+                for log in logs
+                if datetime.fromisoformat(log["timestamp"]) >= start_time
+            ]
 
         if end_time is not None:
-            logs = [log for log in logs if datetime.fromisoformat(log["timestamp"]) <= end_time]
+            logs = [
+                log
+                for log in logs
+                if datetime.fromisoformat(log["timestamp"]) <= end_time
+            ]
 
         # 按时间倒序排列
         logs.sort(key=lambda x: x["timestamp"], reverse=True)
 
         return logs[:limit]
 
-    def validate_input(self, data: dict[str, Any], rules: dict[str, Any]) -> tuple[bool, list[str]]:
+    def validate_input(
+        self, data: dict[str, Any], rules: dict[str, Any]
+    ) -> tuple[bool, list[str]]:
         """验证输入数据"""
         errors = []
 
@@ -313,7 +332,7 @@ class SecurityService:
             "orders": ["read", "create", "update"],
             "notifications": ["read", "update"],
             "risk": ["read"],
-            "monitoring": ["read"]
+            "monitoring": ["read"],
         }
 
         if resource in allowed_actions:
@@ -328,21 +347,21 @@ class SecurityService:
                 "active_limits": len(self._rate_limits),
                 "max_requests_per_minute": self.config.max_requests_per_minute,
                 "max_requests_per_hour": self.config.max_requests_per_hour,
-                "max_requests_per_day": self.config.max_requests_per_day
+                "max_requests_per_day": self.config.max_requests_per_day,
             },
             "audit_logs": {
                 "total_logs": len(self._audit_logs),
                 "audit_enabled": self.config.audit_all_operations,
-                "retention_days": self.config.audit_retention_days
+                "retention_days": self.config.audit_retention_days,
             },
             "data_masking": {
                 "mask_headers": self.config.mask_headers,
                 "mask_cookies": self.config.mask_cookies,
                 "mask_credit_cards": self.config.mask_credit_cards,
-                "mask_emails": self.config.mask_emails
+                "mask_emails": self.config.mask_emails,
             },
             "key_rotation": {
                 "rotation_days": self.config.key_rotation_days,
-                "transition_days": self.config.key_transition_days
-            }
+                "transition_days": self.config.key_transition_days,
+            },
         }

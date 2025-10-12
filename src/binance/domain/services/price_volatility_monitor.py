@@ -13,7 +13,9 @@ class PriceVolatilityMonitor:
     使用滑动窗口算法监控价格波动，检测异常波动
     """
 
-    def __init__(self, window_size: int = 60, threshold_percentage: Decimal = Decimal("2.0")):
+    def __init__(
+        self, window_size: int = 60, threshold_percentage: Decimal = Decimal("2.0")
+    ):
         """初始化价格波动监控器
 
         Args:

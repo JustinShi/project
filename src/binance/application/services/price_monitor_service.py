@@ -45,7 +45,9 @@ class PriceMonitorService:
         self._connectors: dict[str, PriceWebSocketConnector] = {}
         self._is_running = False
 
-    async def start_monitoring(self, symbols: list[str], volatility_threshold: Decimal = Decimal("2.0")) -> None:
+    async def start_monitoring(
+        self, symbols: list[str], volatility_threshold: Decimal = Decimal("2.0")
+    ) -> None:
         """启动价格监控
 
         Args:
@@ -80,7 +82,9 @@ class PriceMonitorService:
 
         logger.info("价格监控已停止")
 
-    async def add_symbol(self, symbol: str, volatility_threshold: Decimal = Decimal("2.0")) -> None:
+    async def add_symbol(
+        self, symbol: str, volatility_threshold: Decimal = Decimal("2.0")
+    ) -> None:
         """添加监控代币
 
         Args:
@@ -125,7 +129,7 @@ class PriceMonitorService:
         """
         monitor = PriceVolatilityMonitor(
             window_size=60,  # 1分钟窗口
-            threshold_percentage=volatility_threshold
+            threshold_percentage=volatility_threshold,
         )
         self._monitors[symbol] = monitor
 
@@ -176,7 +180,9 @@ class PriceMonitorService:
             except Exception as e:
                 logger.error(f"价格更新回调失败: {e}")
 
-    async def _handle_volatility_alert(self, symbol: str, monitor: PriceVolatilityMonitor) -> None:
+    async def _handle_volatility_alert(
+        self, symbol: str, monitor: PriceVolatilityMonitor
+    ) -> None:
         """处理波动警报
 
         Args:
@@ -197,7 +203,9 @@ class PriceMonitorService:
             "timestamp": datetime.now().isoformat(),
         }
 
-        logger.warning(f"价格波动警报: {symbol}, 波动率: {alert_data['volatility_percentage']:.2f}%")
+        logger.warning(
+            f"价格波动警报: {symbol}, 波动率: {alert_data['volatility_percentage']:.2f}%"
+        )
 
         # 触发波动警报回调
         if self._on_volatility_alert:

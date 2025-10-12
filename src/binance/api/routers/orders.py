@@ -35,7 +35,9 @@ _order_execution_service: OrderExecutionService | None = None
 _notification_service: NotificationService | None = None
 
 
-def get_notification_service(user_repo: UserRepository = Depends(get_user_repository)) -> NotificationService:
+def get_notification_service(
+    user_repo: UserRepository = Depends(get_user_repository),
+) -> NotificationService:
     """获取通知服务"""
     global _notification_service
     if _notification_service is None:
@@ -44,7 +46,7 @@ def get_notification_service(user_repo: UserRepository = Depends(get_user_reposi
 
 
 def get_order_execution_service(
-    notification_service: NotificationService = Depends(get_notification_service)
+    notification_service: NotificationService = Depends(get_notification_service),
 ) -> OrderExecutionService:
     """获取订单执行服务"""
     global _order_execution_service
@@ -59,7 +61,7 @@ async def execute_order(
     user_id: int = Query(..., description="用户ID"),
     db: AsyncSession = Depends(get_db_session),
     user_repo: UserRepository = Depends(get_user_repository),
-    order_service: OrderExecutionService = Depends(get_order_execution_service)
+    order_service: OrderExecutionService = Depends(get_order_execution_service),
 ):
     """执行OTO订单"""
     try:
@@ -90,7 +92,7 @@ async def execute_order(
                 order_quantity=request.quantity,
                 timeout_seconds=global_settings.default_timeout_seconds,
                 price_volatility_threshold=global_settings.default_price_volatility_threshold,
-                is_trading_active=True
+                is_trading_active=True,
             )
 
         # 获取当前价格（这里需要从价格服务获取）
@@ -99,7 +101,7 @@ async def execute_order(
             symbol=request.symbol,
             price=Price(Decimal("48.0"), precision=4),  # 模拟KOGE价格
             volume=Decimal("1000.0"),
-            timestamp=datetime.now()
+            timestamp=datetime.now(),
         )
 
         # 解析用户认证信息
@@ -113,7 +115,7 @@ async def execute_order(
             current_price=current_price,
             config=config,
             headers=headers,
-            cookies=cookies
+            cookies=cookies,
         )
 
         if success and order_pair:
@@ -124,9 +126,11 @@ async def execute_order(
                 buy_order_id=order_pair.buy_order_id,
                 sell_order_id=order_pair.sell_order_id,
                 buy_price=order_pair.buy_price.value if order_pair.buy_price else None,
-                sell_price=order_pair.sell_price.value if order_pair.sell_price else None,
+                sell_price=order_pair.sell_price.value
+                if order_pair.sell_price
+                else None,
                 quantity=order_pair.quantity,
-                status=order_pair.status.value
+                status=order_pair.status.value,
             )
         else:
             return OrderExecuteResponse(
@@ -138,7 +142,7 @@ async def execute_order(
                 buy_price=None,
                 sell_price=None,
                 quantity=None,
-                status=None
+                status=None,
             )
 
     except Exception as e:
@@ -150,7 +154,7 @@ async def execute_order(
 async def get_order_status(
     order_pair_id: int,
     user_id: int = Query(..., description="用户ID"),
-    order_service: OrderExecutionService = Depends(get_order_execution_service)
+    order_service: OrderExecutionService = Depends(get_order_execution_service),
 ):
     """获取订单状态"""
     try:
@@ -171,7 +175,7 @@ async def get_order_status(
             sell_price=order_pair.sell_price.value if order_pair.sell_price else None,
             quantity=order_pair.quantity,
             created_at=order_pair.created_at,
-            updated_at=order_pair.updated_at
+            updated_at=order_pair.updated_at,
         )
 
     except HTTPException:
@@ -187,7 +191,7 @@ async def cancel_order(
     user_id: int = Query(..., description="用户ID"),
     db: AsyncSession = Depends(get_db_session),
     user_repo: UserRepository = Depends(get_user_repository),
-    order_service: OrderExecutionService = Depends(get_order_execution_service)
+    order_service: OrderExecutionService = Depends(get_order_execution_service),
 ):
     """取消订单"""
     try:
@@ -208,13 +212,10 @@ async def cancel_order(
             user_id=user_id,
             symbol="kogeusdt",  # 这里应该从订单信息中获取
             headers=headers,
-            cookies=cookies
+            cookies=cookies,
         )
 
-        return OrderCancelResponse(
-            success=success,
-            message=message
-        )
+        return OrderCancelResponse(success=success, message=message)
 
     except HTTPException:
         raise
@@ -225,7 +226,7 @@ async def cancel_order(
 
 @router.get("/statistics", response_model=OrderStatisticsResponse)
 async def get_order_statistics(
-    order_service: OrderExecutionService = Depends(get_order_execution_service)
+    order_service: OrderExecutionService = Depends(get_order_execution_service),
 ):
     """获取订单统计"""
     try:
@@ -236,7 +237,7 @@ async def get_order_statistics(
             pending_orders=stats.get("pending", 0),
             buy_filled_orders=stats.get("buy_filled", 0),
             completed_orders=stats.get("completed", 0),
-            cancelled_orders=stats.get("cancelled", 0)
+            cancelled_orders=stats.get("cancelled", 0),
         )
 
     except Exception as e:
@@ -247,7 +248,7 @@ async def get_order_statistics(
 @router.get("/monitor/{user_id}", response_model=OrderMonitorResponse)
 async def get_order_monitor(
     user_id: int,
-    order_service: OrderExecutionService = Depends(get_order_execution_service)
+    order_service: OrderExecutionService = Depends(get_order_execution_service),
 ):
     """获取订单监控信息"""
     try:
@@ -257,19 +258,25 @@ async def get_order_monitor(
         # 构建活跃订单列表
         active_orders = []
         if active_order:
-            active_orders.append(OrderStatusResponse(
-                order_pair_id=active_order.id,
-                user_id=active_order.user_id,
-                symbol=active_order.symbol,
-                status=active_order.status.value,
-                buy_order_id=active_order.buy_order_id,
-                sell_order_id=active_order.sell_order_id,
-                buy_price=active_order.buy_price.value if active_order.buy_price else None,
-                sell_price=active_order.sell_price.value if active_order.sell_price else None,
-                quantity=active_order.quantity,
-                created_at=active_order.created_at,
-                updated_at=active_order.updated_at
-            ))
+            active_orders.append(
+                OrderStatusResponse(
+                    order_pair_id=active_order.id,
+                    user_id=active_order.user_id,
+                    symbol=active_order.symbol,
+                    status=active_order.status.value,
+                    buy_order_id=active_order.buy_order_id,
+                    sell_order_id=active_order.sell_order_id,
+                    buy_price=active_order.buy_price.value
+                    if active_order.buy_price
+                    else None,
+                    sell_price=active_order.sell_price.value
+                    if active_order.sell_price
+                    else None,
+                    quantity=active_order.quantity,
+                    created_at=active_order.created_at,
+                    updated_at=active_order.updated_at,
+                )
+            )
 
         # 获取订单统计
         stats = await order_service.get_order_statistics()
@@ -280,7 +287,7 @@ async def get_order_monitor(
             connected=False,  # 这里需要从订单服务获取实际连接状态
             listen_key=None,
             reconnect_attempts=0,
-            last_activity=None
+            last_activity=None,
         )
 
         return OrderMonitorResponse(
@@ -292,8 +299,8 @@ async def get_order_monitor(
                 pending_orders=stats.get("pending", 0),
                 buy_filled_orders=stats.get("buy_filled", 0),
                 completed_orders=stats.get("completed", 0),
-                cancelled_orders=stats.get("cancelled", 0)
-            )
+                cancelled_orders=stats.get("cancelled", 0),
+            ),
         )
 
     except Exception as e:
@@ -303,7 +310,7 @@ async def get_order_monitor(
 
 @router.post("/cleanup")
 async def cleanup_timeout_orders(
-    order_service: OrderExecutionService = Depends(get_order_execution_service)
+    order_service: OrderExecutionService = Depends(get_order_execution_service),
 ):
     """清理超时订单"""
     try:
@@ -312,7 +319,7 @@ async def cleanup_timeout_orders(
         return {
             "success": True,
             "message": f"清理了 {timeout_count} 个超时订单",
-            "timeout_count": timeout_count
+            "timeout_count": timeout_count,
         }
 
     except Exception as e:

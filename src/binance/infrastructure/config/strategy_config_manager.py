@@ -13,6 +13,7 @@ import yaml
 @dataclass
 class GlobalSettings:
     """全局设置"""
+
     default_buy_offset_percentage: Decimal
     default_sell_profit_percentage: Decimal
     default_trade_interval_seconds: int
@@ -29,6 +30,7 @@ class GlobalSettings:
 @dataclass
 class StrategyConfig:
     """策略配置"""
+
     strategy_id: str
     strategy_name: str
     enabled: bool
@@ -49,6 +51,7 @@ class StrategyConfig:
 @dataclass
 class UserStrategyOverride:
     """用户策略覆盖配置"""
+
     user_id: int
     strategy_overrides: dict[str, dict[str, Any]]
 
@@ -80,17 +83,31 @@ class StrategyConfigManager:
         """解析全局设置"""
         settings = self._config.get("global_settings", {})
         self._global_settings = GlobalSettings(
-            default_buy_offset_percentage=Decimal(str(settings.get("default_buy_offset_percentage", 0.5))),
-            default_sell_profit_percentage=Decimal(str(settings.get("default_sell_profit_percentage", 1.0))),
-            default_trade_interval_seconds=int(settings.get("default_trade_interval_seconds", 1)),
-            default_single_trade_amount_usdt=Decimal(str(settings.get("default_single_trade_amount_usdt", 30))),
-            default_volume_check_delay_seconds=int(settings.get("default_volume_check_delay_seconds", 60)),
+            default_buy_offset_percentage=Decimal(
+                str(settings.get("default_buy_offset_percentage", 0.5))
+            ),
+            default_sell_profit_percentage=Decimal(
+                str(settings.get("default_sell_profit_percentage", 1.0))
+            ),
+            default_trade_interval_seconds=int(
+                settings.get("default_trade_interval_seconds", 1)
+            ),
+            default_single_trade_amount_usdt=Decimal(
+                str(settings.get("default_single_trade_amount_usdt", 30))
+            ),
+            default_volume_check_delay_seconds=int(
+                settings.get("default_volume_check_delay_seconds", 60)
+            ),
             max_concurrent_users=int(settings.get("max_concurrent_users", 10)),
-            max_price_volatility_percentage=Decimal(str(settings.get("max_price_volatility_percentage", 5.0))),
+            max_price_volatility_percentage=Decimal(
+                str(settings.get("max_price_volatility_percentage", 5.0))
+            ),
             max_retry_attempts=int(settings.get("max_retry_attempts", 3)),
             retry_delay_seconds=int(settings.get("retry_delay_seconds", 5)),
             order_timeout_seconds=int(settings.get("order_timeout_seconds", 300)),
-            websocket_reconnect_delay_seconds=int(settings.get("websocket_reconnect_delay_seconds", 3)),
+            websocket_reconnect_delay_seconds=int(
+                settings.get("websocket_reconnect_delay_seconds", 3)
+            ),
         )
 
     def _parse_strategies(self) -> None:
@@ -105,33 +122,54 @@ class StrategyConfigManager:
                 target_token=strategy.get("target_token"),
                 target_chain=strategy.get("target_chain"),
                 target_volume=Decimal(str(strategy.get("target_volume", 0))),
-                single_trade_amount_usdt=Decimal(str(strategy.get(
-                    "single_trade_amount_usdt",
-                    self._global_settings.default_single_trade_amount_usdt
-                ))),
-                trade_interval_seconds=int(strategy.get(
-                    "trade_interval_seconds",
-                    self._global_settings.default_trade_interval_seconds
-                )),
-                buy_offset_percentage=Decimal(str(strategy.get(
-                    "buy_offset_percentage",
-                    self._global_settings.default_buy_offset_percentage
-                ))),
-                sell_profit_percentage=Decimal(str(strategy.get(
-                    "sell_profit_percentage",
-                    self._global_settings.default_sell_profit_percentage
-                ))),
+                single_trade_amount_usdt=Decimal(
+                    str(
+                        strategy.get(
+                            "single_trade_amount_usdt",
+                            self._global_settings.default_single_trade_amount_usdt,
+                        )
+                    )
+                ),
+                trade_interval_seconds=int(
+                    strategy.get(
+                        "trade_interval_seconds",
+                        self._global_settings.default_trade_interval_seconds,
+                    )
+                ),
+                buy_offset_percentage=Decimal(
+                    str(
+                        strategy.get(
+                            "buy_offset_percentage",
+                            self._global_settings.default_buy_offset_percentage,
+                        )
+                    )
+                ),
+                sell_profit_percentage=Decimal(
+                    str(
+                        strategy.get(
+                            "sell_profit_percentage",
+                            self._global_settings.default_sell_profit_percentage,
+                        )
+                    )
+                ),
                 user_ids=strategy.get("user_ids", []),
-                order_timeout_seconds=int(strategy.get(
-                    "order_timeout_seconds",
-                    self._global_settings.order_timeout_seconds
-                )),
-                volume_check_delay_seconds=int(strategy.get(
-                    "volume_check_delay_seconds",
-                    self._global_settings.default_volume_check_delay_seconds
-                )),
-                price_volatility_threshold=Decimal(str(strategy.get("price_volatility_threshold")))
-                    if strategy.get("price_volatility_threshold") else None,
+                order_timeout_seconds=int(
+                    strategy.get(
+                        "order_timeout_seconds",
+                        self._global_settings.order_timeout_seconds,
+                    )
+                ),
+                volume_check_delay_seconds=int(
+                    strategy.get(
+                        "volume_check_delay_seconds",
+                        self._global_settings.default_volume_check_delay_seconds,
+                    )
+                ),
+                price_volatility_threshold=Decimal(
+                    str(strategy.get("price_volatility_threshold"))
+                )
+                if strategy.get("price_volatility_threshold")
+                else None,
                 max_retry_attempts=strategy.get("max_retry_attempts"),
             )
             self._strategies[strategy_config.strategy_id] = strategy_config
@@ -164,9 +202,7 @@ class StrategyConfigManager:
         return [s for s in self._strategies.values() if s.enabled]
 
     def get_user_strategy_config(
-        self,
-        user_id: int,
-        strategy_id: str
+        self, user_id: int, strategy_id: str
     ) -> StrategyConfig | None:
         """获取用户的策略配置（应用用户覆盖）
 
@@ -200,37 +236,55 @@ class StrategyConfigManager:
             strategy_id=base_strategy.strategy_id,
             strategy_name=base_strategy.strategy_name,
             enabled=strategy_override.get("enabled", base_strategy.enabled),
-            target_token=strategy_override.get("target_token", base_strategy.target_token),
-            target_chain=strategy_override.get("target_chain", base_strategy.target_chain),
-            target_volume=Decimal(str(strategy_override.get("target_volume", base_strategy.target_volume))),
-            single_trade_amount_usdt=Decimal(str(strategy_override.get(
-                "single_trade_amount_usdt",
-                base_strategy.single_trade_amount_usdt
-            ))),
-            trade_interval_seconds=int(strategy_override.get(
-                "trade_interval_seconds",
-                base_strategy.trade_interval_seconds
-            )),
-            buy_offset_percentage=Decimal(str(strategy_override.get(
-                "buy_offset_percentage",
-                base_strategy.buy_offset_percentage
-            ))),
-            sell_profit_percentage=Decimal(str(strategy_override.get(
-                "sell_profit_percentage",
-                base_strategy.sell_profit_percentage
-            ))),
+            target_token=strategy_override.get(
+                "target_token", base_strategy.target_token
+            ),
+            target_chain=strategy_override.get(
+                "target_chain", base_strategy.target_chain
+            ),
+            target_volume=Decimal(
+                str(strategy_override.get("target_volume", base_strategy.target_volume))
+            ),
+            single_trade_amount_usdt=Decimal(
+                str(
+                    strategy_override.get(
+                        "single_trade_amount_usdt",
+                        base_strategy.single_trade_amount_usdt,
+                    )
+                )
+            ),
+            trade_interval_seconds=int(
+                strategy_override.get(
+                    "trade_interval_seconds", base_strategy.trade_interval_seconds
+                )
+            ),
+            buy_offset_percentage=Decimal(
+                str(
+                    strategy_override.get(
+                        "buy_offset_percentage", base_strategy.buy_offset_percentage
+                    )
+                )
+            ),
+            sell_profit_percentage=Decimal(
+                str(
+                    strategy_override.get(
+                        "sell_profit_percentage", base_strategy.sell_profit_percentage
+                    )
+                )
+            ),
             user_ids=base_strategy.user_ids,
-            order_timeout_seconds=int(strategy_override.get(
-                "order_timeout_seconds",
-                base_strategy.order_timeout_seconds
-            )),
-            price_volatility_threshold=Decimal(str(strategy_override.get(
-                "price_volatility_threshold"
-            ))) if strategy_override.get("price_volatility_threshold")
-                else base_strategy.price_volatility_threshold,
+            order_timeout_seconds=int(
+                strategy_override.get(
+                    "order_timeout_seconds", base_strategy.order_timeout_seconds
+                )
+            ),
+            price_volatility_threshold=Decimal(
+                str(strategy_override.get("price_volatility_threshold"))
+            )
+            if strategy_override.get("price_volatility_threshold")
+            else base_strategy.price_volatility_threshold,
             max_retry_attempts=strategy_override.get(
-                "max_retry_attempts",
-                base_strategy.max_retry_attempts
+                "max_retry_attempts", base_strategy.max_retry_attempts
             ),
         )
 
@@ -246,7 +300,9 @@ class StrategyConfigManager:
         strategies = []
         for strategy in self.get_enabled_strategies():
             if user_id in strategy.user_ids:
-                user_strategy = self.get_user_strategy_config(user_id, strategy.strategy_id)
+                user_strategy = self.get_user_strategy_config(
+                    user_id, strategy.strategy_id
+                )
                 if user_strategy and user_strategy.enabled:
                     strategies.append(user_strategy)
         return strategies
@@ -256,5 +312,3 @@ class StrategyConfigManager:
         self._strategies.clear()
         self._user_overrides.clear()
         self._load_config()
-
-

@@ -172,7 +172,9 @@ class BinanceClient:
         response = await self._request("GET", path)
         return response.get("data", {})
 
-    async def get_token_info(self, data_type: str = "aggregate") -> list[dict[str, Any]]:
+    async def get_token_info(
+        self, data_type: str = "aggregate"
+    ) -> list[dict[str, Any]]:
         """查询代币信息
 
         Args:
@@ -245,4 +247,3 @@ class BinanceClient:
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
         """异步上下文管理器退出"""
         await self.close()
-

@@ -38,4 +38,3 @@ class User:
 
     def __str__(self) -> str:
         return f"User(id={self.id}, name={self.name}, valid={self.is_valid}, has_creds={self.has_credentials()})"
-

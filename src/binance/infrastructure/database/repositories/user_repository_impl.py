@@ -1,6 +1,5 @@
 """用户仓储实现"""
 
-
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -33,12 +32,12 @@ class UserRepositoryImpl(UserRepository):
         # 确保 headers 和 cookies 是字符串类型（处理可能的 bytes）
         headers = model.headers
         if isinstance(headers, bytes):
-            headers = headers.decode('utf-8')
-        
+            headers = headers.decode("utf-8")
+
         cookies = model.cookies
         if isinstance(cookies, bytes):
-            cookies = cookies.decode('utf-8')
-        
+            cookies = cookies.decode("utf-8")
+
         return User(
             id=model.id,
             name=model.name,
@@ -92,4 +91,3 @@ class UserRepositoryImpl(UserRepository):
 
         await self._session.flush()
         return self._to_entity(user_model)
-

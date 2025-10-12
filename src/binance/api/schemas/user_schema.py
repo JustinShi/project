@@ -51,4 +51,3 @@ class VolumeResponse(BaseModel):
     volumes_by_token: list[TokenVolume] = Field(
         default_factory=list, description="各代币交易量"
     )
-

@@ -13,6 +13,7 @@ from binance.config.constants import PriceOffsetMode
 @dataclass
 class TradingTarget:
     """交易目标配置"""
+
     token_symbol_short: str
     chain: str | None
     target_volume: Decimal
@@ -30,6 +31,7 @@ class TradingTarget:
 @dataclass
 class UserConfig:
     """用户配置"""
+
     user_id: int
     trading_targets: list[TradingTarget]
 
@@ -37,6 +39,7 @@ class UserConfig:
 @dataclass
 class GlobalSettings:
     """全局设置"""
+
     default_price_offset_mode: PriceOffsetMode
     default_buy_offset_value: Decimal
     default_sell_offset_value: Decimal
@@ -68,10 +71,11 @@ class YAMLConfigManager:
 
         # 检查文件是否被修改
         current_modified = self.config_path.stat().st_mtime
-        if (self._config_cache is None or
-            self._last_modified is None or
-            current_modified > self._last_modified):
-
+        if (
+            self._config_cache is None
+            or self._last_modified is None
+            or current_modified > self._last_modified
+        ):
             with open(self.config_path, encoding="utf-8") as f:
                 self._config_cache = yaml.safe_load(f)
             self._last_modified = current_modified
@@ -99,25 +103,34 @@ class YAMLConfigManager:
                         chain=target_data.get("chain"),
                         target_volume=Decimal(str(target_data["target_volume"])),
                         current_volume=Decimal(str(target_data["current_volume"])),
-                        volume_multiplier=Decimal(str(target_data["volume_multiplier"])),
-                        price_offset_mode=PriceOffsetMode(target_data["price_offset_mode"]),
+                        volume_multiplier=Decimal(
+                            str(target_data["volume_multiplier"])
+                        ),
+                        price_offset_mode=PriceOffsetMode(
+                            target_data["price_offset_mode"]
+                        ),
                         buy_offset_value=Decimal(str(target_data["buy_offset_value"])),
-                        sell_offset_value=Decimal(str(target_data["sell_offset_value"])),
+                        sell_offset_value=Decimal(
+                            str(target_data["sell_offset_value"])
+                        ),
                         order_quantity=Decimal(str(target_data["order_quantity"])),
                         timeout_seconds=target_data["timeout_seconds"],
-                        price_volatility_threshold=Decimal(str(target_data["price_volatility_threshold"])),
-                        is_trading_active=target_data["is_trading_active"]
+                        price_volatility_threshold=Decimal(
+                            str(target_data["price_volatility_threshold"])
+                        ),
+                        is_trading_active=target_data["is_trading_active"],
                     )
                     trading_targets.append(target)
 
                 return UserConfig(
-                    user_id=user_data["user_id"],
-                    trading_targets=trading_targets
+                    user_id=user_data["user_id"], trading_targets=trading_targets
                 )
 
         return None
 
-    def get_trading_target(self, user_id: int, token_symbol_short: str) -> TradingTarget | None:
+    def get_trading_target(
+        self, user_id: int, token_symbol_short: str
+    ) -> TradingTarget | None:
         """获取特定代币的交易目标
 
         Args:
@@ -147,18 +160,30 @@ class YAMLConfigManager:
         global_data = config.get("global_settings", {})
 
         return GlobalSettings(
-            default_price_offset_mode=PriceOffsetMode(global_data.get("default_price_offset_mode", "PERCENTAGE")),
-            default_buy_offset_value=Decimal(str(global_data.get("default_buy_offset_value", 0.5))),
-            default_sell_offset_value=Decimal(str(global_data.get("default_sell_offset_value", 0.5))),
-            default_order_quantity=Decimal(str(global_data.get("default_order_quantity", 10.0))),
+            default_price_offset_mode=PriceOffsetMode(
+                global_data.get("default_price_offset_mode", "PERCENTAGE")
+            ),
+            default_buy_offset_value=Decimal(
+                str(global_data.get("default_buy_offset_value", 0.5))
+            ),
+            default_sell_offset_value=Decimal(
+                str(global_data.get("default_sell_offset_value", 0.5))
+            ),
+            default_order_quantity=Decimal(
+                str(global_data.get("default_order_quantity", 10.0))
+            ),
             default_timeout_seconds=global_data.get("default_timeout_seconds", 1800),
-            default_price_volatility_threshold=Decimal(str(global_data.get("default_price_volatility_threshold", 5.0))),
+            default_price_volatility_threshold=Decimal(
+                str(global_data.get("default_price_volatility_threshold", 5.0))
+            ),
             max_concurrent_orders=global_data.get("max_concurrent_orders", 5),
             order_retry_attempts=global_data.get("order_retry_attempts", 3),
-            retry_delay_seconds=global_data.get("retry_delay_seconds", 30)
+            retry_delay_seconds=global_data.get("retry_delay_seconds", 30),
         )
 
-    def update_current_volume(self, user_id: int, token_symbol_short: str, new_volume: Decimal) -> bool:
+    def update_current_volume(
+        self, user_id: int, token_symbol_short: str, new_volume: Decimal
+    ) -> bool:
         """更新当前交易量
 
         Args:
@@ -181,7 +206,12 @@ class YAMLConfigManager:
 
                             # 保存配置文件
                             with open(self.config_path, "w", encoding="utf-8") as f:
-                                yaml.dump(config, f, default_flow_style=False, allow_unicode=True)
+                                yaml.dump(
+                                    config,
+                                    f,
+                                    default_flow_style=False,
+                                    allow_unicode=True,
+                                )
 
                             # 清除缓存
                             self._config_cache = None
@@ -218,14 +248,15 @@ class YAMLConfigManager:
                     sell_offset_value=Decimal(str(target_data["sell_offset_value"])),
                     order_quantity=Decimal(str(target_data["order_quantity"])),
                     timeout_seconds=target_data["timeout_seconds"],
-                    price_volatility_threshold=Decimal(str(target_data["price_volatility_threshold"])),
-                    is_trading_active=target_data["is_trading_active"]
+                    price_volatility_threshold=Decimal(
+                        str(target_data["price_volatility_threshold"])
+                    ),
+                    is_trading_active=target_data["is_trading_active"],
                 )
                 trading_targets.append(target)
 
             user_config = UserConfig(
-                user_id=user_data["user_id"],
-                trading_targets=trading_targets
+                user_id=user_data["user_id"], trading_targets=trading_targets
             )
             result.append(user_config)
 

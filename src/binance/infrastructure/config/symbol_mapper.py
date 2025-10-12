@@ -79,4 +79,3 @@ class SymbolMapper:
 
         self._memory[cache_key] = mapping
         return mapping
-

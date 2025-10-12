@@ -39,11 +39,11 @@ strategies:
     enabled: true
     target_token: AOP
     target_chain: BSC
-    target_volume: 5500                         # 测试等待逻辑
-    volume_check_delay_seconds: 10              # 测试用：批次完成后等待10秒
+    target_volume: 4096                         # 测试批次完成后等待逻辑
+    volume_check_delay_seconds: 15              # 批次完成后等待15秒
     #single_trade_amount_usdt: 10               # 覆盖全局默认值
     #trade_interval_seconds: 2                  # 覆盖全局默认值
-    user_ids: [2]  # 只用户2测试
+    user_ids: [1,2]  # 只用户2测试
 
 
 # ============================================================================

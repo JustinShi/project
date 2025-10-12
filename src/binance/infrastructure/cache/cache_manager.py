@@ -26,9 +26,7 @@ class CacheManager:
         self._redis = redis_client
         self._settings = get_settings()
 
-    async def get_token_precision(
-        self, symbol_short: str
-    ) -> tuple[int, int] | None:
+    async def get_token_precision(self, symbol_short: str) -> tuple[int, int] | None:
         """从缓存获取代币精度
 
         Args:
@@ -211,14 +209,10 @@ class CacheManager:
             cutoff_time = datetime.now() - timedelta(
                 seconds=self._settings.price_volatility_window
             )
-            await self._redis.zremrangebyscore(
-                key, "-inf", cutoff_time.timestamp()
-            )
+            await self._redis.zremrangebyscore(key, "-inf", cutoff_time.timestamp())
 
             # 设置键的过期时间（2倍监控窗口）
-            await self._redis.expire(
-                key, self._settings.price_volatility_window * 2
-            )
+            await self._redis.expire(key, self._settings.price_volatility_window * 2)
 
             return True
         except Exception as e:
@@ -286,4 +280,3 @@ def get_cache_manager() -> CacheManager:
 
     redis = get_redis_client()
     return CacheManager(redis)
-

@@ -44,8 +44,7 @@ def get_risk_manager() -> RiskManager:
 
 @router.get("/profile/{user_id}", response_model=RiskProfileResponse)
 async def get_risk_profile(
-    user_id: int,
-    risk_manager: RiskManager = Depends(get_risk_manager)
+    user_id: int, risk_manager: RiskManager = Depends(get_risk_manager)
 ):
     """获取用户风险配置"""
     try:
@@ -72,7 +71,7 @@ async def get_risk_profile(
             max_daily_loss=profile.max_daily_loss,
             is_active=profile.is_active,
             created_at=profile.created_at,
-            updated_at=profile.updated_at
+            updated_at=profile.updated_at,
         )
 
     except HTTPException:
@@ -86,7 +85,7 @@ async def get_risk_profile(
 async def create_risk_profile(
     user_id: int,
     request: RiskProfileCreateRequest,
-    risk_manager: RiskManager = Depends(get_risk_manager)
+    risk_manager: RiskManager = Depends(get_risk_manager),
 ):
     """创建用户风险配置"""
     try:
@@ -149,7 +148,7 @@ async def create_risk_profile(
             max_daily_loss=profile.max_daily_loss,
             is_active=profile.is_active,
             created_at=profile.created_at,
-            updated_at=profile.updated_at
+            updated_at=profile.updated_at,
         )
 
     except HTTPException:
@@ -163,7 +162,7 @@ async def create_risk_profile(
 async def update_risk_profile(
     user_id: int,
     request: RiskProfileUpdateRequest,
-    risk_manager: RiskManager = Depends(get_risk_manager)
+    risk_manager: RiskManager = Depends(get_risk_manager),
 ):
     """更新用户风险配置"""
     try:
@@ -230,7 +229,7 @@ async def update_risk_profile(
             max_daily_loss=profile.max_daily_loss,
             is_active=profile.is_active,
             created_at=profile.created_at,
-            updated_at=profile.updated_at
+            updated_at=profile.updated_at,
         )
 
     except HTTPException:
@@ -242,8 +241,7 @@ async def update_risk_profile(
 
 @router.get("/alerts/{user_id}", response_model=RiskAlertListResponse)
 async def get_risk_alerts(
-    user_id: int,
-    risk_manager: RiskManager = Depends(get_risk_manager)
+    user_id: int, risk_manager: RiskManager = Depends(get_risk_manager)
 ):
     """获取用户风险警报"""
     try:
@@ -251,23 +249,25 @@ async def get_risk_alerts(
 
         alert_responses = []
         for alert in alerts:
-            alert_responses.append(RiskAlertResponse(
-                id=alert.id,
-                user_id=alert.user_id,
-                title=alert.title,
-                message=alert.message,
-                severity=alert.severity.value,
-                status=alert.status.value,
-                risk_factor=alert.risk_factor.value,
-                risk_level=alert.risk_level.value,
-                current_value=alert.current_value,
-                threshold_value=alert.threshold_value,
-                data=alert.data,
-                triggered_at=alert.triggered_at,
-                acknowledged_at=alert.acknowledged_at,
-                resolved_at=alert.resolved_at,
-                duration_seconds=alert.get_duration()
-            ))
+            alert_responses.append(
+                RiskAlertResponse(
+                    id=alert.id,
+                    user_id=alert.user_id,
+                    title=alert.title,
+                    message=alert.message,
+                    severity=alert.severity.value,
+                    status=alert.status.value,
+                    risk_factor=alert.risk_factor.value,
+                    risk_level=alert.risk_level.value,
+                    current_value=alert.current_value,
+                    threshold_value=alert.threshold_value,
+                    data=alert.data,
+                    triggered_at=alert.triggered_at,
+                    acknowledged_at=alert.acknowledged_at,
+                    resolved_at=alert.resolved_at,
+                    duration_seconds=alert.get_duration(),
+                )
+            )
 
         active_count = len([a for a in alerts if a.is_active()])
         critical_count = len([a for a in alerts if a.is_critical()])
@@ -276,7 +276,7 @@ async def get_risk_alerts(
             alerts=alert_responses,
             total=len(alerts),
             active_count=active_count,
-            critical_count=critical_count
+            critical_count=critical_count,
         )
 
     except Exception as e:
@@ -288,22 +288,16 @@ async def get_risk_alerts(
 async def acknowledge_risk_alert(
     user_id: int,
     request: RiskAlertActionRequest,
-    risk_manager: RiskManager = Depends(get_risk_manager)
+    risk_manager: RiskManager = Depends(get_risk_manager),
 ):
     """确认风险警报"""
     try:
         success = risk_manager.acknowledge_alert(user_id, request.alert_id)
 
         if success:
-            return RiskAlertActionResponse(
-                success=True,
-                message="警报已确认"
-            )
+            return RiskAlertActionResponse(success=True, message="警报已确认")
         else:
-            return RiskAlertActionResponse(
-                success=False,
-                message="警报不存在或已处理"
-            )
+            return RiskAlertActionResponse(success=False, message="警报不存在或已处理")
 
     except Exception as e:
         logger.error(f"确认风险警报异常: {e}")
@@ -314,22 +308,16 @@ async def acknowledge_risk_alert(
 async def resolve_risk_alert(
     user_id: int,
     request: RiskAlertActionRequest,
-    risk_manager: RiskManager = Depends(get_risk_manager)
+    risk_manager: RiskManager = Depends(get_risk_manager),
 ):
     """解决风险警报"""
     try:
         success = risk_manager.resolve_alert(user_id, request.alert_id)
 
         if success:
-            return RiskAlertActionResponse(
-                success=True,
-                message="警报已解决"
-            )
+            return RiskAlertActionResponse(success=True, message="警报已解决")
         else:
-            return RiskAlertActionResponse(
-                success=False,
-                message="警报不存在或已处理"
-            )
+            return RiskAlertActionResponse(success=False, message="警报不存在或已处理")
 
     except Exception as e:
         logger.error(f"解决风险警报异常: {e}")
@@ -340,7 +328,7 @@ async def resolve_risk_alert(
 async def assess_risk(
     user_id: int,
     request: RiskAssessmentRequest,
-    risk_manager: RiskManager = Depends(get_risk_manager)
+    risk_manager: RiskManager = Depends(get_risk_manager),
 ):
     """风险评估"""
     try:
@@ -349,7 +337,7 @@ async def assess_risk(
             symbol=request.symbol,
             price=Price(request.current_price, precision=4),
             volume=Decimal("1000.0"),
-            timestamp=datetime.now()
+            timestamp=datetime.now(),
         )
 
         # 执行风险评估
@@ -357,29 +345,31 @@ async def assess_risk(
             user_id=user_id,
             symbol=request.symbol,
             order_amount=request.order_amount,
-            current_price=current_price
+            current_price=current_price,
         )
 
         # 构建警报响应
         alert_responses = []
         for alert in alerts:
-            alert_responses.append(RiskAlertResponse(
-                id=alert.id,
-                user_id=alert.user_id,
-                title=alert.title,
-                message=alert.message,
-                severity=alert.severity.value,
-                status=alert.status.value,
-                risk_factor=alert.risk_factor.value,
-                risk_level=alert.risk_level.value,
-                current_value=alert.current_value,
-                threshold_value=alert.threshold_value,
-                data=alert.data,
-                triggered_at=alert.triggered_at,
-                acknowledged_at=alert.acknowledged_at,
-                resolved_at=alert.resolved_at,
-                duration_seconds=alert.get_duration()
-            ))
+            alert_responses.append(
+                RiskAlertResponse(
+                    id=alert.id,
+                    user_id=alert.user_id,
+                    title=alert.title,
+                    message=alert.message,
+                    severity=alert.severity.value,
+                    status=alert.status.value,
+                    risk_factor=alert.risk_factor.value,
+                    risk_level=alert.risk_level.value,
+                    current_value=alert.current_value,
+                    threshold_value=alert.threshold_value,
+                    data=alert.data,
+                    triggered_at=alert.triggered_at,
+                    acknowledged_at=alert.acknowledged_at,
+                    resolved_at=alert.resolved_at,
+                    duration_seconds=alert.get_duration(),
+                )
+            )
 
         # 获取风险等级
         profile = risk_manager.get_risk_profile(user_id)
@@ -399,7 +389,7 @@ async def assess_risk(
             message=message,
             risk_level=risk_level,
             alerts=alert_responses,
-            recommendations=recommendations
+            recommendations=recommendations,
         )
 
     except Exception as e:
@@ -409,8 +399,7 @@ async def assess_risk(
 
 @router.get("/metrics/{user_id}", response_model=RiskMetricsResponse)
 async def get_risk_metrics(
-    user_id: int,
-    risk_manager: RiskManager = Depends(get_risk_manager)
+    user_id: int, risk_manager: RiskManager = Depends(get_risk_manager)
 ):
     """获取风险指标"""
     try:
@@ -428,7 +417,7 @@ async def get_risk_metrics(
             orders_count_hour=metrics.orders_count_hour,
             price_volatility=metrics.price_volatility,
             position_ratio=metrics.position_ratio,
-            last_order_time=metrics.last_order_time
+            last_order_time=metrics.last_order_time,
         )
 
     except HTTPException:
@@ -440,8 +429,7 @@ async def get_risk_metrics(
 
 @router.get("/summary/{user_id}", response_model=RiskSummaryResponse)
 async def get_risk_summary(
-    user_id: int,
-    risk_manager: RiskManager = Depends(get_risk_manager)
+    user_id: int, risk_manager: RiskManager = Depends(get_risk_manager)
 ):
     """获取风险摘要"""
     try:
@@ -457,7 +445,7 @@ async def get_risk_summary(
             consecutive_losses=summary["consecutive_losses"],
             orders_today=summary["orders_today"],
             orders_this_hour=summary["orders_this_hour"],
-            trading_allowed=summary["trading_allowed"]
+            trading_allowed=summary["trading_allowed"],
         )
 
     except Exception as e:
@@ -467,8 +455,7 @@ async def get_risk_summary(
 
 @router.get("/report/{user_id}", response_model=RiskReportResponse)
 async def get_risk_report(
-    user_id: int,
-    risk_manager: RiskManager = Depends(get_risk_manager)
+    user_id: int, risk_manager: RiskManager = Depends(get_risk_manager)
 ):
     """获取风险报告"""
     try:
@@ -511,7 +498,7 @@ async def get_risk_report(
                 max_daily_loss=profile.max_daily_loss,
                 is_active=profile.is_active,
                 created_at=profile.created_at,
-                updated_at=profile.updated_at
+                updated_at=profile.updated_at,
             ),
             risk_metrics=RiskMetricsResponse(
                 user_id=metrics.user_id,
@@ -523,25 +510,28 @@ async def get_risk_report(
                 orders_count_hour=metrics.orders_count_hour,
                 price_volatility=metrics.price_volatility,
                 position_ratio=metrics.position_ratio,
-                last_order_time=metrics.last_order_time
+                last_order_time=metrics.last_order_time,
             ),
-            active_alerts=[RiskAlertResponse(
-                id=alert.id,
-                user_id=alert.user_id,
-                title=alert.title,
-                message=alert.message,
-                severity=alert.severity.value,
-                status=alert.status.value,
-                risk_factor=alert.risk_factor.value,
-                risk_level=alert.risk_level.value,
-                current_value=alert.current_value,
-                threshold_value=alert.threshold_value,
-                data=alert.data,
-                triggered_at=alert.triggered_at,
-                acknowledged_at=alert.acknowledged_at,
-                resolved_at=alert.resolved_at,
-                duration_seconds=alert.get_duration()
-            ) for alert in alerts],
+            active_alerts=[
+                RiskAlertResponse(
+                    id=alert.id,
+                    user_id=alert.user_id,
+                    title=alert.title,
+                    message=alert.message,
+                    severity=alert.severity.value,
+                    status=alert.status.value,
+                    risk_factor=alert.risk_factor.value,
+                    risk_level=alert.risk_level.value,
+                    current_value=alert.current_value,
+                    threshold_value=alert.threshold_value,
+                    data=alert.data,
+                    triggered_at=alert.triggered_at,
+                    acknowledged_at=alert.acknowledged_at,
+                    resolved_at=alert.resolved_at,
+                    duration_seconds=alert.get_duration(),
+                )
+                for alert in alerts
+            ],
             risk_summary=RiskSummaryResponse(
                 user_id=summary["user_id"],
                 risk_level=summary["risk_level"],
@@ -552,14 +542,14 @@ async def get_risk_report(
                 consecutive_losses=summary["consecutive_losses"],
                 orders_today=summary["orders_today"],
                 orders_this_hour=summary["orders_this_hour"],
-                trading_allowed=summary["trading_allowed"]
+                trading_allowed=summary["trading_allowed"],
             ),
             recommendations=[
                 "定期检查风险配置",
                 "监控价格波动",
                 "控制订单频率",
-                "设置合理的止损点"
-            ]
+                "设置合理的止损点",
+            ],
         )
 
     except HTTPException:
