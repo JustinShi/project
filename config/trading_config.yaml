@@ -9,7 +9,7 @@ global_settings:
   default_sell_profit_percentage: 10          # 默认卖出折扣 1.0%（低于买价）
   default_trade_interval_seconds: 1            # 默认交易间隔 1 秒
   default_single_trade_amount_usdt: 200         # 默认单次交易金额 30 USDT
-  default_volume_check_delay_seconds: 60       # 默认批次完成后等待时间（秒），让交易量数据更新
+  default_volume_check_delay_seconds: 120       # 默认批次完成后等待时间（秒），让交易量数据更新
   
   # 风控参数
   max_concurrent_users: 10                     # 最大并发用户数
@@ -24,13 +24,16 @@ global_settings:
 # ============================================================================
 strategies:
   # KOGE 刷量策略
-  - strategy_id: "koge_volume_boost"
-    strategy_name: "KOGE 刷量策略"
-    enabled: false
-    target_token: KOGE
+  - strategy_id: "aop_2"
+    strategy_name: "AOP 刷量策略"
+    enabled: true
+    target_token: AOP
     target_chain: BSC
-    target_volume: 16384                       # 目标交易量（USDT）
-    user_ids: [1]                              # 参与用户
+    target_volume: 16384                       
+    volume_check_delay_seconds: 120              
+    single_trade_amount_usdt: 200               
+    trade_interval_seconds: 1  
+    user_ids: [3,4,5,6,7]                              # 参与用户
     # 其他参数使用全局默认值
 
   # AOP 测试策略
@@ -39,11 +42,11 @@ strategies:
     enabled: true
     target_token: AOP
     target_chain: BSC
-    target_volume: 4096                         # 测试批次完成后等待逻辑
-    volume_check_delay_seconds: 15              # 批次完成后等待15秒
-    #single_trade_amount_usdt: 10               # 覆盖全局默认值
-    #trade_interval_seconds: 2                  # 覆盖全局默认值
-    user_ids: [1,2]  # 只用户2测试
+    target_volume: 8200                         # 目标：今日总交易量达到 18000 USDT（真实值）
+    volume_check_delay_seconds: 120               # 批次完成后等待5秒（测试用）
+    single_trade_amount_usdt: 200               # 单笔交易额 200 USDT
+    trade_interval_seconds: 1                  # 交易间隔 1 秒
+    user_ids: [1,2]                             # 参与用户
 
 
 # ============================================================================

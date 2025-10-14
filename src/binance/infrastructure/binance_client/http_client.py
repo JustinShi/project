@@ -3,9 +3,7 @@
 from typing import Any
 
 import httpx
-from aiolimiter import AsyncLimiter
 
-from binance.config import get_settings
 from binance.config.constants import API_TIMEOUT_DEFAULT, BINANCE_API_BASE_URL
 from binance.infrastructure.logging import get_logger
 
@@ -20,35 +18,31 @@ class BinanceClient:
         self,
         headers: dict[str, str],
         cookies: str | None = None,
-        rate_limiter: AsyncLimiter | None = None,
     ):
         """初始化币安客户端
 
         Args:
             headers: HTTP请求头（包含认证信息）
             cookies: Cookies字符串
-            rate_limiter: API限流器（可选）
         """
         self._headers = headers.copy() if headers else {}
         self._cookies = cookies
-        self._settings = get_settings()
 
         # 将cookies添加到headers中（币安API可能需要这样）
         if cookies:
             self._headers["cookie"] = cookies
 
-        # API限流器（每用户10请求/秒）
-        self._rate_limiter = rate_limiter or AsyncLimiter(
-            max_rate=self._settings.api_rate_limit_per_user,
-            time_period=self._settings.api_rate_limit_period,
+        # 创建HTTP客户端（配置连接池以支持并发请求）
+        limits = httpx.Limits(
+            max_connections=100,  # 最大连接数
+            max_keepalive_connections=20,  # 最大保持活动连接数
         )
-
-        # 创建HTTP客户端
         self._client = httpx.AsyncClient(
             base_url=BINANCE_API_BASE_URL,
             headers=self._headers,
             timeout=API_TIMEOUT_DEFAULT,
             follow_redirects=True,
+            limits=limits,
         )
 
     @staticmethod
@@ -78,7 +72,7 @@ class BinanceClient:
         path: str,
         **kwargs: Any,
     ) -> dict[str, Any]:
-        """发送HTTP请求（带限流）
+        """发送HTTP请求
 
         Args:
             method: HTTP方法（GET, POST等）
@@ -92,31 +86,30 @@ class BinanceClient:
             httpx.HTTPError: HTTP请求错误
             ValueError: API返回错误码
         """
-        async with self._rate_limiter:
-            try:
-                response = await self._client.request(method, path, **kwargs)
-                response.raise_for_status()
+        try:
+            response = await self._client.request(method, path, **kwargs)
+            response.raise_for_status()
 
-                data = response.json()
+            data = response.json()
 
-                # 检查API返回的业务状态
-                if not data.get("success", False):
-                    error_code = data.get("code", "UNKNOWN")
-                    error_msg = data.get("message", "Unknown error")
-                    logger.error(
-                        "binance_api_error",
-                        path=path,
-                        code=error_code,
-                        message=error_msg,
-                    )
-                    raise ValueError(f"API错误 [{error_code}]: {error_msg}")
+            # 检查API返回的业务状态
+            if not data.get("success", False):
+                error_code = data.get("code", "UNKNOWN")
+                error_msg = data.get("message", "Unknown error")
+                logger.error(
+                    "binance_api_error",
+                    path=path,
+                    code=error_code,
+                    message=error_msg,
+                )
+                raise ValueError(f"API错误 [{error_code}]: {error_msg}")
 
-                logger.debug("binance_api_success", path=path, data=data)
-                return data
+            logger.debug("binance_api_success", path=path, data=data)
+            return data
 
-            except httpx.HTTPError as e:
-                logger.error("binance_http_error", path=path, error=str(e))
-                raise
+        except httpx.HTTPError as e:
+            logger.error("binance_http_error", path=path, error=str(e))
+            raise
 
     async def get_wallet_balance(self) -> dict[str, Any]:
         """查询Alpha钱包余额

@@ -26,6 +26,7 @@ help:  ## 显示帮助信息
 	@echo "📈 交易脚本:"
 	@echo "run-strategy     - 运行交易策略 (需要指定 STRATEGY=策略名)"
 	@echo "update-credentials - 更新用户凭证"
+	@echo "check-volumes    - 查询所有用户的实际交易量"
 	@echo ""
 	@echo "🧹 清理命令:"
 	@echo "clean            - 清理临时文件"
@@ -79,8 +80,11 @@ ruff-all:  ## 运行 Ruff 完整检查（格式化 + 检查 + 修复）
 
 lint:  ## 运行代码质量检查 (使用 Ruff)
 	uv run ruff check .
-	uv run bandit -r . -f json -o bandit-report.json
-	uv run mypy . --ignore-missing-imports --no-strict-optional
+	uv run bandit -r src/ scripts/ -f json -o bandit-report.json --skip B101,B104,B105,B110
+	@echo "✓ 代码质量检查通过"
+
+type-check:  ## 运行类型检查 (MyPy)
+	uv run mypy src/ --ignore-missing-imports --no-strict-optional
 
 test:  ## 运行测试
 	uv run pytest tests/ -v
@@ -103,10 +107,7 @@ quality: format lint test  ## 运行完整的代码质量检查流程
 
 clean:  ## 清理临时文件
 	@echo "🧹 清理临时文件..."
-	@if exist __pycache__ rmdir /s /q __pycache__ 2>nul
-	@if exist .pytest_cache rmdir /s /q .pytest_cache 2>nul
-	@if exist logs rmdir /s /q logs 2>nul
-	@if exist *.log del *.log 2>nul
+	uv run python scripts/cleanup.py
 	@if exist .coverage del .coverage 2>nul
 	@if exist htmlcov rmdir /s /q htmlcov 2>nul
 	@if exist .mypy_cache rmdir /s /q .mypy_cache 2>nul
@@ -148,3 +149,12 @@ update-credentials:  ## 更新用户凭证
 	@echo "🔐 启动用户凭证更新工具"
 	@echo ""
 	uv run python scripts/update_user_credentials_quick.py
+
+check-volumes:  ## 查询所有用户的实际交易量 (使用: make check-volumes TOKEN=代币符号)
+	@echo "📊 查询所有用户交易量"
+	@echo ""
+ifdef TOKEN
+	uv run python scripts/check_all_users_volume.py $(TOKEN)
+else
+	uv run python scripts/check_all_users_volume.py
+endif

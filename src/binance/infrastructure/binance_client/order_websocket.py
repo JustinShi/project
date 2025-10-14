@@ -52,7 +52,10 @@ class OrderWebSocketConnector:
                 # 如果监听任务正常结束，退出循环
                 break
             except Exception as e:
-                logger.error(f"订单WebSocket连接异常: {e}")
+                try:
+                    logger.error(f"订单WebSocket连接异常: {e}")
+                except (OSError, BrokenPipeError):
+                    pass  # 控制台已关闭，静默处理
                 if self._running:
                     await self._handle_reconnect()
 
@@ -118,11 +121,17 @@ class OrderWebSocketConnector:
                     break
                 await self._handle_message(message)
         except websockets.exceptions.ConnectionClosed as e:
-            logger.warning(f"WebSocket连接关闭: {e}")
+            try:
+                logger.warning(f"WebSocket连接关闭: {e}")
+            except (OSError, BrokenPipeError):
+                pass  # 控制台已关闭，静默处理
             if self._running:
                 await self._handle_reconnect()
         except Exception as e:
-            logger.error(f"监听消息异常: {e}")
+            try:
+                logger.error(f"监听消息异常: {e}")
+            except (OSError, BrokenPipeError):
+                pass  # 控制台已关闭，静默处理
             if self._running:
                 await self._handle_reconnect()
 
@@ -173,9 +182,15 @@ class OrderWebSocketConnector:
                 logger.debug(f"未识别的消息格式: {data}")
 
         except json.JSONDecodeError as e:
-            logger.error(f"解析WebSocket消息失败: {e}")
+            try:
+                logger.error(f"解析WebSocket消息失败: {e}")
+            except (OSError, BrokenPipeError):
+                pass  # 控制台已关闭，静默处理
         except Exception as e:
-            logger.error(f"处理WebSocket消息异常: {e}")
+            try:
+                logger.error(f"处理WebSocket消息异常: {e}")
+            except (OSError, BrokenPipeError):
+                pass  # 控制台已关闭，静默处理
 
     async def _handle_order_execution(self, data: dict[str, Any]) -> None:
         """处理订单执行报告"""

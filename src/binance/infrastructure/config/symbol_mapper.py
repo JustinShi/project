@@ -32,7 +32,11 @@ class SymbolMapper:
         self._memory: dict[str, SymbolMapping] = {}
 
     def get_mapping(self, short_symbol: str, chain: str | None = None) -> SymbolMapping:
-        """根据代币简称获取完整的符号映射"""
+        """根据代币简称获取完整的符号映射
+
+        注意：由于 LocalCache 使用单例模式，所有实例共享同一份内存数据，
+        因此可以直接从缓存读取最新数据，无需重新加载文件。
+        """
 
         short_symbol_upper = short_symbol.upper()
         cache_key = f"{(chain or 'DEFAULT').upper()}::{short_symbol_upper}"

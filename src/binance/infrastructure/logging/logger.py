@@ -3,6 +3,7 @@
 import logging
 import sys
 from datetime import datetime
+from logging.handlers import RotatingFileHandler, TimedRotatingFileHandler
 from pathlib import Path
 from typing import Any
 
@@ -85,10 +86,34 @@ def setup_logging() -> None:
         level=getattr(logging, settings.log_level.upper()),
     )
 
-    # 添加文件处理器
-    file_handler = logging.FileHandler(settings.log_file)
+    # 添加按日期轮转的文件处理器
+    # when='midnight': 每天午夜轮转
+    # interval=1: 每1天
+    # backupCount=30: 保留30天的日志
+    # encoding='utf-8': 支持中文
+    file_handler = TimedRotatingFileHandler(
+        settings.log_file,
+        when="midnight",
+        interval=1,
+        backupCount=30,
+        encoding="utf-8"
+    )
     file_handler.setLevel(getattr(logging, settings.log_level.upper()))
+    # 设置日志文件名后缀格式（日期）
+    file_handler.suffix = "%Y-%m-%d"
     logging.root.addHandler(file_handler)
+
+    # 同时添加一个按大小轮转的文件处理器作为备份
+    # 避免单个日志文件过大
+    trading_log = log_file_path.parent / "trading.log"
+    size_handler = RotatingFileHandler(
+        trading_log,
+        maxBytes=10*1024*1024,  # 10MB
+        backupCount=5,
+        encoding="utf-8"
+    )
+    size_handler.setLevel(getattr(logging, settings.log_level.upper()))
+    logging.root.addHandler(size_handler)
 
     # 禁用 httpx 和 httpcore 的详细日志
     logging.getLogger("httpx").setLevel(logging.WARNING)

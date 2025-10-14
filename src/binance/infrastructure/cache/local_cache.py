@@ -28,13 +28,27 @@ class CachedItem:
 
 
 class LocalCache:
-    """本地JSON文件缓存"""
+    """本地JSON文件缓存（使用单例模式确保缓存一致性）"""
+
+    _instance: "LocalCache | None" = None
+
+    def __new__(cls) -> "LocalCache":
+        """单例模式：确保全局只有一个 LocalCache 实例"""
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+            cls._instance._initialized: bool = False
+        return cls._instance
 
     def __init__(self) -> None:
+        # 避免重复初始化
+        if hasattr(self, "_initialized") and self._initialized:
+            return
+
         CACHE_DIR.mkdir(parents=True, exist_ok=True)
         self._token_info: dict[str, CachedItem] = {}
         self._token_precision: dict[str, CachedItem] = {}
         self._load()
+        self._initialized = True
 
     def _load(self) -> None:
         """加载文件内容到内存"""

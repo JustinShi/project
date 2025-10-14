@@ -17242,6 +17242,13 @@
     },
     "cached_at": "2025-10-10T22:32:08.885060"
   },
+  "TEST": {
+    "data": {
+      "alphaId": "ALPHA_123",
+      "price": "1.0"
+    },
+    "cached_at": "2025-10-13T23:00:49.550652"
+  },
   "AOP": {
     "data": {
       "tokenId": "39883516E77864312AB4CE3A0BDAF1E4",
@@ -17252,15 +17259,15 @@
       "name": "Ark Of Panda",
       "symbol": "AOP",
       "iconUrl": "https://bin.bnbstatic.com/images/web3-data/public/token/logos/849a8d47df8a49ff93f01f8e3241f990.png",
-      "price": "0.08054355983867254967",
-      "percentChange24h": "0.99",
-      "volume24h": "9418571345.132154522251028774234",
-      "marketCap": "24163067.95160176",
-      "fdv": "161087119.67734509",
-      "liquidity": "2866439.3230447950311733",
+      "price": "0.08385903776288026933",
+      "percentChange24h": "2.67",
+      "volume24h": "6642488478.010786368681119399391",
+      "marketCap": "25157711.32886408",
+      "fdv": "167718075.52576053",
+      "liquidity": "3206432.6894012829167532",
       "totalSupply": "2000000000",
       "circulatingSupply": "300000000",
-      "holders": "20133",
+      "holders": "21977",
       "decimals": 18,
       "listingCex": false,
       "hotTag": false,
@@ -17271,9 +17278,9 @@
       "tradeDecimal": 8,
       "alphaId": "ALPHA_382",
       "offsell": false,
-      "priceHigh24h": "0.08789715372658536887",
-      "priceLow24h": "0.07567586192023240956",
-      "count24h": "39245650",
+      "priceHigh24h": "1.32221379946443018629",
+      "priceLow24h": "0.07646623839170916625",
+      "count24h": "28260016",
       "onlineTge": false,
       "onlineAirdrop": true,
       "score": 111,
@@ -17283,6 +17290,6 @@
       "mulPoint": 4,
       "bnExclusiveState": false
     },
-    "cached_at": "2025-10-12T00:27:54.287321"
+    "cached_at": "2025-10-15T00:47:22.784430"
   }
 }

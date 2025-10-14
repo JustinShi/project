@@ -81,3 +81,19 @@ Thumbs.db
 .env.local
 .env.production
 .env.staging
+
+# Security reports
+bandit-report.json
+
+# Pytest
+.pytest_cache/
+
+# MyPy
+.mypy_cache/
+
+# Ruff
+.ruff_cache/
+
+# Database files in root (should be in data/)
+database.db
+*.db

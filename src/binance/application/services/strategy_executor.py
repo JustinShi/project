@@ -15,6 +15,7 @@ from binance.infrastructure.binance_client.order_websocket import (
     OrderWebSocketConnector,
 )
 from binance.infrastructure.binance_client.oto_order_client import BinanceOTOOrderClient
+from binance.infrastructure.cache.local_cache import LocalCache
 from binance.infrastructure.config import SymbolMapper
 from binance.infrastructure.config.strategy_config_manager import (
     StrategyConfig,
@@ -41,6 +42,7 @@ class StrategyExecutor:
 
     def __init__(self, config_path: str = "config/trading_config.yaml"):
         self.config_manager = StrategyConfigManager(config_path)
+        self.cache = LocalCache()  # 全局缓存实例（单例模式）
         self.symbol_mapper = SymbolMapper()
         self._running_tasks: dict[str, asyncio.Task] = {}
         self._user_volumes: dict[
@@ -236,12 +238,14 @@ class StrategyExecutor:
                 )
 
                 logger.info(
-                    "开始批次交易",
+                    "📊 开始批次交易",
                     user_id=user_id,
                     strategy_id=strategy.strategy_id,
                     current_volume=str(current_volume),
+                    target_volume=str(strategy.target_volume),
                     remaining_volume=str(remaining_volume),
                     planned_loops=loop_count,
+                    progress=f"{float(current_volume)/float(strategy.target_volume)*100:.1f}%",
                 )
 
                 # 执行 N 次交易
@@ -395,10 +399,9 @@ class StrategyExecutor:
 
             mul_point = int(token_info_entry.get("mulPoint", 1) or 1)
 
-            # 单次交易的真实交易量 = single_trade_amount_usdt / mulPoint
-            single_real_volume = strategy.single_trade_amount_usdt / Decimal(
-                str(mul_point)
-            )
+            # 单次交易的真实交易量就是配置的金额
+            # mulPoint 只影响显示，不影响实际交易量
+            single_real_volume = strategy.single_trade_amount_usdt
 
             # 计算循环次数（向上取整）
             loop_count = math.ceil(float(remaining_volume / single_real_volume))
@@ -555,7 +558,8 @@ class StrategyExecutor:
             cookies,
         )
 
-        # 获取符号映射
+        # 获取符号映射（注意：需要在精度缓存之后调用，因为需要从缓存读取精度信息）
+        # LocalCache 使用单例模式，所有地方共享同一份内存数据，因此总是获取最新数据
         mapping = self.symbol_mapper.get_mapping(
             strategy.target_token, strategy.target_chain
         )
@@ -639,26 +643,24 @@ class StrategyExecutor:
                 if not sell_filled:
                     logger.warning("卖单未成交", order_id=pending_order_id)
                     # 买单已成交但卖单未成交，仍算部分成功
-                    # 计算真实交易量（考虑 mulPoint）
-                    real_trade_volume = effective_amount / Decimal(str(mul_point))
-                    return True, real_trade_volume
+                    # 真实交易量就是实际下单金额
+                    return True, effective_amount
 
                 logger.info("卖单已成交", order_id=pending_order_id)
 
-                # 计算真实交易量（考虑 mulPoint）
-                # 对于 mulPoint=4 的代币，实际交易量 = 名义交易量 / 4
-                real_trade_volume = effective_amount / Decimal(str(mul_point))
-
+                # 真实交易量就是实际下单金额
+                # mulPoint 只影响服务器显示的交易量，不影响我们实际交易了多少
+                # 例如：实际交易200 USDT，服务器显示 200×4=800，但真实贡献仍是200
                 logger.info(
                     "OTO订单完全成交",
                     working_order_id=working_order_id,
                     pending_order_id=pending_order_id,
                     amount=str(effective_amount),
                     mul_point=mul_point,
-                    real_trade_volume=str(real_trade_volume),
+                    real_trade_volume=str(effective_amount),
                 )
 
-                return True, real_trade_volume
+                return True, effective_amount
             else:
                 # 检查是否是认证失败错误
                 is_auth_error = self._is_authentication_error(message)
@@ -734,13 +736,10 @@ class StrategyExecutor:
             headers: 请求头
             cookies: Cookies
         """
-        from binance.infrastructure.cache.local_cache import LocalCache
-
-        cache = LocalCache()
         symbol_with_quote = f"{alpha_symbol}USDT"
 
         # 检查缓存是否存在
-        cached_precision = cache.get_token_precision(symbol_with_quote)
+        cached_precision = self.cache.get_token_precision(symbol_with_quote)
         if cached_precision:
             logger.debug(
                 "使用缓存的精度信息",
@@ -761,7 +760,7 @@ class StrategyExecutor:
                 for symbol_data in symbols_list:
                     if symbol_data.get("symbol") == symbol_with_quote:
                         # 保存到缓存
-                        cache.set_token_precision(symbol_with_quote, symbol_data)
+                        self.cache.set_token_precision(symbol_with_quote, symbol_data)
                         logger.info(
                             "精度信息已缓存",
                             symbol=symbol_with_quote,
@@ -801,13 +800,10 @@ class StrategyExecutor:
         Returns:
             代币信息字典，如果获取失败返回 None
         """
-        from binance.infrastructure.cache.local_cache import LocalCache
-
-        cache = LocalCache()
         symbol_upper = symbol_short.upper()
 
         # 1. 尝试从缓存读取
-        cached_data = cache.get_token_info(symbol_upper)
+        cached_data = self.cache.get_token_info(symbol_upper)
         if cached_data:
             logger.info(
                 "使用缓存的代币信息",
@@ -828,7 +824,7 @@ class StrategyExecutor:
                 for entry in token_list:
                     if str(entry.get("symbol", "")).upper() == symbol_upper:
                         # 4. 保存到缓存
-                        cache.set_token_info(symbol_upper, entry)
+                        self.cache.set_token_info(symbol_upper, entry)
                         logger.info(
                             "代币信息已缓存",
                             token=symbol_short,
@@ -1110,12 +1106,14 @@ class StrategyExecutor:
         # 先检查订单是否已经成交（避免时序问题）
         order_status = self._order_status.get(order_id, {})
         status = order_status.get("status")
-        
+
         if status == "FILLED":
             logger.info("订单已成交（检查时已完成）", order_id=order_id)
             return True
         elif status in ["CANCELED", "REJECTED", "EXPIRED"]:
-            logger.warning("订单未成交（检查时已终止）", order_id=order_id, status=status)
+            logger.warning(
+                "订单未成交（检查时已终止）", order_id=order_id, status=status
+            )
             return False
 
         # 创建事件

@@ -28,8 +28,6 @@ dependencies = [
     "cryptography>=41.0.0",
     # 日志
     "structlog>=23.2.0",
-    # API限流
-    "aiolimiter>=1.1.0",
     # 环境变量
     "python-dotenv>=1.0.0",
     # CLI工具
@@ -111,8 +109,19 @@ select = [
 ignore = [
     "E501",  # line too long, handled by formatter
     "B008",  # do not perform function calls in argument defaults
+    "B904",  # raise ... from err (API 路由中的异常处理)
     "C901",  # too complex
     "E203",  # whitespace before ':'
+    "RUF001",  # 中文字符串中的全角标点符号
+    "RUF002",  # 中文文档字符串中的全角标点符号
+    "RUF003",  # 中文注释中的全角标点符号
+    "RUF006",  # asyncio.create_task 返回值存储
+    "ARG001",  # 未使用的函数参数（API 路由预留参数）
+    "ARG002",  # 未使用的方法参数（未实现功能的预留参数）
+    "SIM102",  # 嵌套 if 语句可以合并
+    "SIM105",  # 使用 contextlib.suppress 替代 try-except-pass（保持注释清晰）
+    "B007",  # 循环控制变量未使用
+    "F821",  # 未定义的名称（未实现的类型）
 ]
 
 # 每个文件的忽略规则

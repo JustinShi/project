@@ -165,6 +165,13 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         logger.info("用户中断执行")
         sys.exit(0)
+    except (OSError, BrokenPipeError):
+        # 控制台关闭导致的输出错误，正常退出
+        sys.exit(0)
     except Exception as e:
-        logger.error("程序异常退出", error=str(e))
+        try:
+            logger.error("程序异常退出", error=str(e), error_type=type(e).__name__)
+        except (OSError, BrokenPipeError):
+            # 如果日志输出也失败，静默退出
+            pass
         sys.exit(1)
