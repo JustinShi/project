@@ -6,7 +6,6 @@ from .strategy_config_manager import (
 from .strategy_config_manager import (
     StrategyConfig,
     StrategyConfigManager,
-    UserStrategyOverride,
 )
 from .symbol_mapper import SymbolMapper, SymbolMapping
 from .yaml_config_manager import (
@@ -26,6 +25,5 @@ __all__ = [
     "SymbolMapping",
     "TradingTarget",
     "UserConfig",
-    "UserStrategyOverride",
     "YAMLConfigManager",
 ]

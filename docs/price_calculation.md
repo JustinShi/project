@@ -347,15 +347,21 @@ strategies:
     sell_profit_percentage: 1.0         # 此策略卖出折扣 1.0%
 ```
 
-### 用户级修改（用户自定义）
+### 策略级修改（多策略配置）
 
 ```yaml
-user_overrides:
-  - user_id: 1
-    strategies:
-      koge_boost:
-        buy_offset_percentage: 1.0      # 用户1愿意承担更高成本
-        sell_profit_percentage: 2.0
+strategies:
+  - strategy_id: "koge_aggressive"
+    strategy_name: "KOGE 激进策略"
+    user_ids: [1]                       # 用户1使用激进策略
+    buy_offset_percentage: 1.0          # 用户1愿意承担更高成本
+    sell_profit_percentage: 2.0
+    
+  - strategy_id: "koge_conservative"
+    strategy_name: "KOGE 保守策略"
+    user_ids: [2, 3, 4]                 # 其他用户使用保守策略
+    buy_offset_percentage: 0.3          # 保守成本
+    sell_profit_percentage: 0.5
 ```
 
 ---

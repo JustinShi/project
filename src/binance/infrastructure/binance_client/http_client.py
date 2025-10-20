@@ -1,5 +1,6 @@
 """币安HTTP客户端"""
 
+import re
 from typing import Any
 
 import httpx
@@ -14,6 +15,31 @@ logger = get_logger(__name__)
 class BinanceClient:
     """币安API客户端（异步HTTP）"""
 
+    def _clean_headers(self, headers: dict[str, Any]) -> dict[str, str]:
+        """清理headers字典中的所有值"""
+        cleaned_headers = {}
+
+        for key, value in headers.items():
+            if isinstance(value, str):
+                # 移除所有控制字符（包括\r, \n, \t等）
+                cleaned_value = re.sub(r"[\x00-\x1f\x7f-\x9f]", "", value)
+                # 移除多余的空格
+                cleaned_value = cleaned_value.strip()
+                # 移除连续的空白字符
+                cleaned_value = re.sub(r"\s+", " ", cleaned_value)
+                # 确保key也是字符串
+                cleaned_key = str(key).strip()
+                cleaned_headers[cleaned_key] = cleaned_value
+            else:
+                # 非字符串值转换为字符串并清理
+                cleaned_value = re.sub(r"[\x00-\x1f\x7f-\x9f]", "", str(value))
+                cleaned_value = cleaned_value.strip()
+                cleaned_value = re.sub(r"\s+", " ", cleaned_value)
+                cleaned_key = str(key).strip()
+                cleaned_headers[cleaned_key] = cleaned_value
+
+        return cleaned_headers
+
     def __init__(
         self,
         headers: dict[str, str],
@@ -25,7 +51,8 @@ class BinanceClient:
             headers: HTTP请求头（包含认证信息）
             cookies: Cookies字符串
         """
-        self._headers = headers.copy() if headers else {}
+        # 清理headers中的非法字符
+        self._headers = self._clean_headers(headers.copy() if headers else {})
         self._cookies = cookies
 
         # 将cookies添加到headers中（币安API可能需要这样）
@@ -228,6 +255,47 @@ class BinanceClient:
         logger.info("get_alpha_token_list", path=path)
         response = await self._request("GET", path)
         return response.get("data", [])
+
+    async def get_user_airdrop_score(self) -> dict[str, Any]:
+        """查询用户空投积分
+
+        Returns:
+            用户空投积分数据，格式：
+            {
+                "isPass": null,
+                "sumScore": "182",
+                "startDatetime": 1751414400000,
+                "endDatetime": 1752624000000,
+                "list": [
+                    {
+                        "date": "2025-07-16",
+                        "scoreTime": null,
+                        "totalScore": "19",
+                        "balanceScore": "2",
+                        "alphaVolumeScore": "17",
+                        "balanceSnapshot": "2439.5358330403837744",
+                        "alphaVolume": "131874.25961200"
+                    }
+                ],
+                "userSpendList": [
+                    {
+                        "id": 2299876,
+                        "spendTime": 1752494408000,
+                        "spendScore": "15.000000000000000000",
+                        "bizType": "AIRDROP",
+                        "bizId": "7d60e69a607c11f0ab54067961fb7a23"
+                    }
+                ]
+            }
+
+        Raises:
+            ValueError: API返回错误
+        """
+        path = "/bapi/defi/v1/private/wallet-direct/buw/tge/common/user-score"
+
+        logger.info("get_user_airdrop_score", path=path)
+        response = await self._request("GET", path)
+        return response.get("data", {})
 
     async def close(self) -> None:
         """关闭HTTP客户端"""

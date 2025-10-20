@@ -3,7 +3,7 @@
 import logging
 import sys
 from datetime import datetime
-from logging.handlers import RotatingFileHandler, TimedRotatingFileHandler
+from logging.handlers import TimedRotatingFileHandler
 from pathlib import Path
 from typing import Any
 
@@ -86,34 +86,32 @@ def setup_logging() -> None:
         level=getattr(logging, settings.log_level.upper()),
     )
 
-    # 添加按日期轮转的文件处理器
-    # when='midnight': 每天午夜轮转
-    # interval=1: 每1天
-    # backupCount=30: 保留30天的日志
-    # encoding='utf-8': 支持中文
-    file_handler = TimedRotatingFileHandler(
+    # 配置每日日志文件
+    # 主日志文件：按日期轮转，保留7天
+    main_log_handler = TimedRotatingFileHandler(
         settings.log_file,
         when="midnight",
         interval=1,
-        backupCount=30,
-        encoding="utf-8"
+        backupCount=7,  # 只保留7天的日志
+        encoding="utf-8",
     )
-    file_handler.setLevel(getattr(logging, settings.log_level.upper()))
+    main_log_handler.setLevel(getattr(logging, settings.log_level.upper()))
     # 设置日志文件名后缀格式（日期）
-    file_handler.suffix = "%Y-%m-%d"
-    logging.root.addHandler(file_handler)
+    main_log_handler.suffix = "%Y-%m-%d"
+    logging.root.addHandler(main_log_handler)
 
-    # 同时添加一个按大小轮转的文件处理器作为备份
-    # 避免单个日志文件过大
+    # 交易专用日志文件：按日期轮转，保留7天
     trading_log = log_file_path.parent / "trading.log"
-    size_handler = RotatingFileHandler(
+    trading_log_handler = TimedRotatingFileHandler(
         trading_log,
-        maxBytes=10*1024*1024,  # 10MB
-        backupCount=5,
-        encoding="utf-8"
+        when="midnight",
+        interval=1,
+        backupCount=7,  # 只保留7天的日志
+        encoding="utf-8",
     )
-    size_handler.setLevel(getattr(logging, settings.log_level.upper()))
-    logging.root.addHandler(size_handler)
+    trading_log_handler.setLevel(getattr(logging, settings.log_level.upper()))
+    trading_log_handler.suffix = "%Y-%m-%d"
+    logging.root.addHandler(trading_log_handler)
 
     # 禁用 httpx 和 httpcore 的详细日志
     logging.getLogger("httpx").setLevel(logging.WARNING)
@@ -143,7 +141,7 @@ def setup_logging() -> None:
             getattr(logging, settings.log_level.upper())
         ),
         context_class=dict,
-        logger_factory=structlog.PrintLoggerFactory(),
+        logger_factory=structlog.stdlib.LoggerFactory(),
         cache_logger_on_first_use=True,
     )
 

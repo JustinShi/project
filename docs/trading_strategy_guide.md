@@ -8,7 +8,7 @@
 
 1. **多策略支持** - 可配置多个不同的交易策略
 2. **多用户并发** - 支持多个用户同时执行同一策略
-3. **用户自定义配置** - 用户可覆盖策略的任何参数
+3. **灵活配置** - 策略可覆盖全局默认参数
 4. **实时监控** - 查看策略执行状态和进度
 5. **灵活控制** - 可启动/停止单个或所有策略
 
@@ -21,9 +21,7 @@
 ```
 全局设置 (global_settings)
   ↓
-策略配置 (strategies)
-  ↓
-用户覆盖 (user_overrides) ← 优先级最高
+策略配置 (strategies) ← 优先级最高
 ```
 
 ## 🔧 配置示例
@@ -66,16 +64,25 @@ strategies:
       - 3
 ```
 
-### 3. 用户自定义配置
+### 3. 多策略配置
 
 ```yaml
-user_overrides:
-  - user_id: 1
-    strategies:
-      koge_volume_boost:
-        enabled: true
-        single_trade_amount_usdt: 50      # 用户 1 使用 50 USDT
-        trade_interval_seconds: 2         # 用户 1 每 2 秒交易一次
+strategies:
+  - strategy_id: "koge_vip"
+    strategy_name: "KOGE VIP策略"
+    enabled: true
+    target_token: KOGE
+    user_ids: [1]                         # VIP用户
+    single_trade_amount_usdt: 50          # VIP用户使用 50 USDT
+    trade_interval_seconds: 2             # VIP用户每 2 秒交易一次
+    
+  - strategy_id: "koge_normal"
+    strategy_name: "KOGE 普通策略"
+    enabled: true
+    target_token: KOGE
+    user_ids: [2, 3, 4]                   # 普通用户
+    single_trade_amount_usdt: 10          # 普通用户使用 10 USDT
+    trade_interval_seconds: 1             # 普通用户每 1 秒交易一次
 ```
 
 ## 💻 使用方法
@@ -213,18 +220,16 @@ $ uv run python scripts/run_trading_strategy.py --status
    trade_interval_seconds: 1  # 最少 1 秒
    ```
 
-3. **使用用户覆盖**
+3. **使用多策略配置**
    ```yaml
-   # 为不同用户设置不同参数
-   user_overrides:
-     - user_id: 1
-       strategies:
-         koge_volume_boost:
-           single_trade_amount_usdt: 50  # VIP 用户
-     - user_id: 2
-       strategies:
-         koge_volume_boost:
-           single_trade_amount_usdt: 10  # 普通用户
+   # 为不同用户创建不同策略
+   strategies:
+     - strategy_id: "koge_vip"
+       user_ids: [1]
+       single_trade_amount_usdt: 50      # VIP 用户
+     - strategy_id: "koge_normal"
+       user_ids: [2, 3, 4]
+       single_trade_amount_usdt: 10      # 普通用户
    ```
 
 4. **监控进度**

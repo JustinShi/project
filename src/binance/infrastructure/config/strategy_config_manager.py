@@ -48,14 +48,6 @@ class StrategyConfig:
     max_retry_attempts: int | None = None
 
 
-@dataclass
-class UserStrategyOverride:
-    """用户策略覆盖配置"""
-
-    user_id: int
-    strategy_overrides: dict[str, dict[str, Any]]
-
-
 class StrategyConfigManager:
     """交易策略配置管理器"""
 
@@ -64,7 +56,6 @@ class StrategyConfigManager:
         self._config: dict[str, Any] | None = None
         self._global_settings: GlobalSettings | None = None
         self._strategies: dict[str, StrategyConfig] = {}
-        self._user_overrides: dict[int, UserStrategyOverride] = {}
         self._load_config()
 
     def _load_config(self) -> None:
@@ -77,7 +68,6 @@ class StrategyConfigManager:
 
         self._parse_global_settings()
         self._parse_strategies()
-        self._parse_user_overrides()
 
     def _parse_global_settings(self) -> None:
         """解析全局设置"""
@@ -174,17 +164,6 @@ class StrategyConfigManager:
             )
             self._strategies[strategy_config.strategy_id] = strategy_config
 
-    def _parse_user_overrides(self) -> None:
-        """解析用户覆盖配置"""
-        overrides = self._config.get("user_overrides", [])
-        for override in overrides:
-            user_id = override.get("user_id")
-            strategy_overrides = override.get("strategies", {})
-            self._user_overrides[user_id] = UserStrategyOverride(
-                user_id=user_id,
-                strategy_overrides=strategy_overrides,
-            )
-
     def get_global_settings(self) -> GlobalSettings:
         """获取全局设置"""
         return self._global_settings
@@ -204,92 +183,28 @@ class StrategyConfigManager:
     def get_user_strategy_config(
         self, user_id: int, strategy_id: str
     ) -> StrategyConfig | None:
-        """获取用户的策略配置（应用用户覆盖）
+        """获取用户的策略配置
 
         Args:
             user_id: 用户ID
             strategy_id: 策略ID
 
         Returns:
-            应用了用户覆盖后的策略配置
+            策略配置（如果用户参与该策略）
         """
-        # 获取基础策略配置
-        base_strategy = self.get_strategy(strategy_id)
-        if not base_strategy:
+        # 获取策略配置
+        strategy = self.get_strategy(strategy_id)
+        if not strategy:
             return None
 
         # 检查用户是否在策略的用户列表中
-        if user_id not in base_strategy.user_ids:
+        if user_id not in strategy.user_ids:
             return None
 
-        # 应用用户覆盖
-        user_override = self._user_overrides.get(user_id)
-        if not user_override:
-            return base_strategy
-
-        strategy_override = user_override.strategy_overrides.get(strategy_id)
-        if not strategy_override:
-            return base_strategy
-
-        # 创建新的策略配置，应用覆盖
-        return StrategyConfig(
-            strategy_id=base_strategy.strategy_id,
-            strategy_name=base_strategy.strategy_name,
-            enabled=strategy_override.get("enabled", base_strategy.enabled),
-            target_token=strategy_override.get(
-                "target_token", base_strategy.target_token
-            ),
-            target_chain=strategy_override.get(
-                "target_chain", base_strategy.target_chain
-            ),
-            target_volume=Decimal(
-                str(strategy_override.get("target_volume", base_strategy.target_volume))
-            ),
-            single_trade_amount_usdt=Decimal(
-                str(
-                    strategy_override.get(
-                        "single_trade_amount_usdt",
-                        base_strategy.single_trade_amount_usdt,
-                    )
-                )
-            ),
-            trade_interval_seconds=int(
-                strategy_override.get(
-                    "trade_interval_seconds", base_strategy.trade_interval_seconds
-                )
-            ),
-            buy_offset_percentage=Decimal(
-                str(
-                    strategy_override.get(
-                        "buy_offset_percentage", base_strategy.buy_offset_percentage
-                    )
-                )
-            ),
-            sell_profit_percentage=Decimal(
-                str(
-                    strategy_override.get(
-                        "sell_profit_percentage", base_strategy.sell_profit_percentage
-                    )
-                )
-            ),
-            user_ids=base_strategy.user_ids,
-            order_timeout_seconds=int(
-                strategy_override.get(
-                    "order_timeout_seconds", base_strategy.order_timeout_seconds
-                )
-            ),
-            price_volatility_threshold=Decimal(
-                str(strategy_override.get("price_volatility_threshold"))
-            )
-            if strategy_override.get("price_volatility_threshold")
-            else base_strategy.price_volatility_threshold,
-            max_retry_attempts=strategy_override.get(
-                "max_retry_attempts", base_strategy.max_retry_attempts
-            ),
-        )
+        return strategy
 
     def get_user_strategies(self, user_id: int) -> list[StrategyConfig]:
-        """获取用户的所有策略配置（应用覆盖）
+        """获取用户的所有策略配置
 
         Args:
             user_id: 用户ID
@@ -300,15 +215,10 @@ class StrategyConfigManager:
         strategies = []
         for strategy in self.get_enabled_strategies():
             if user_id in strategy.user_ids:
-                user_strategy = self.get_user_strategy_config(
-                    user_id, strategy.strategy_id
-                )
-                if user_strategy and user_strategy.enabled:
-                    strategies.append(user_strategy)
+                strategies.append(strategy)
         return strategies
 
     def reload(self) -> None:
         """重新加载配置文件"""
         self._strategies.clear()
-        self._user_overrides.clear()
         self._load_config()

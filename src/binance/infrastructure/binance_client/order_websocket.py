@@ -66,13 +66,18 @@ class OrderWebSocketConnector:
         # 停止监听任务
         if self._listen_task and not self._listen_task.done():
             self._listen_task.cancel()
-            with contextlib.suppress(asyncio.CancelledError):
-                await self._listen_task
+            try:
+                await asyncio.wait_for(self._listen_task, timeout=5.0)
+            except (asyncio.CancelledError, asyncio.TimeoutError):
+                pass  # 正常取消或超时
 
         # 关闭WebSocket连接
         if self._websocket:
             try:
-                await self._websocket.close()
+                # 使用超时关闭连接
+                await asyncio.wait_for(self._websocket.close(), timeout=5.0)
+            except (asyncio.TimeoutError, ConnectionResetError, AttributeError) as e:
+                logger.warning(f"关闭WebSocket连接异常: {e}")
             except Exception as e:
                 logger.warning(f"关闭WebSocket连接异常: {e}")
             finally:
@@ -86,8 +91,16 @@ class OrderWebSocketConnector:
         logger.info(f"连接订单WebSocket: {ws_url}")
 
         try:
-            # 建立WebSocket连接
-            self._websocket = await websockets.connect(ws_url)
+            # 建立WebSocket连接，添加超时和错误处理
+            self._websocket = await asyncio.wait_for(
+                websockets.connect(
+                    ws_url,
+                    ping_interval=20,  # 20秒ping间隔
+                    ping_timeout=10,   # 10秒ping超时
+                    close_timeout=10,  # 10秒关闭超时
+                ),
+                timeout=30  # 30秒连接超时
+            )
 
             # 发送订阅消息
             subscribe_msg = {
@@ -107,6 +120,16 @@ class OrderWebSocketConnector:
 
             logger.info("订单WebSocket连接成功")
 
+        except asyncio.TimeoutError:
+            logger.error("WebSocket连接超时")
+            if self.on_connection_event:
+                await self.on_connection_event("error", {"error": "连接超时"})
+            raise
+        except (ConnectionResetError, AttributeError) as e:
+            logger.error(f"WebSocket连接重置错误: {e}")
+            if self.on_connection_event:
+                await self.on_connection_event("error", {"error": f"连接重置: {e}"})
+            raise
         except Exception as e:
             logger.error(f"订单WebSocket连接异常: {e}")
             if self.on_connection_event:
@@ -123,6 +146,14 @@ class OrderWebSocketConnector:
         except websockets.exceptions.ConnectionClosed as e:
             try:
                 logger.warning(f"WebSocket连接关闭: {e}")
+            except (OSError, BrokenPipeError):
+                pass  # 控制台已关闭，静默处理
+            if self._running:
+                await self._handle_reconnect()
+        except (ConnectionResetError, AttributeError) as e:
+            # 处理websockets库内部的连接错误
+            try:
+                logger.warning(f"WebSocket连接重置: {e}")
             except (OSError, BrokenPipeError):
                 pass  # 控制台已关闭，静默处理
             if self._running:
@@ -163,7 +194,7 @@ class OrderWebSocketConnector:
                     elif event_type == "outboundAccountPosition":
                         await self._handle_account_update(inner_data)
                     else:
-                        logger.debug(f"未处理的事件类型: {event_type}")
+                        logger.info(f"未处理的事件类型: {event_type}")
                 return
 
             # 检查直接消息类型（标准格式）
@@ -177,9 +208,9 @@ class OrderWebSocketConnector:
                     # 账户余额更新
                     await self._handle_account_update(data)
                 else:
-                    logger.debug(f"未处理的事件类型: {event_type}")
+                    logger.info(f"未处理的事件类型: {event_type}")
             else:
-                logger.debug(f"未识别的消息格式: {data}")
+                logger.info(f"未识别的消息格式: {data}")
 
         except json.JSONDecodeError as e:
             try:

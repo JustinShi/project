@@ -168,22 +168,46 @@ class BinanceOTOOrderClient:
                     return True, "订单下单成功", order_info
                 else:
                     error_msg = result.get("message", "未知错误")
-                    logger.error(f"OTO订单下单失败: {error_msg}")
-                    return False, error_msg, None
+                    error_code = result.get("code", "未知错误码")
+                    logger.error(f"OTO订单下单失败: {error_msg} (错误码: {error_code})")
+                    return False, f"{error_msg} (错误码: {error_code})", None
             else:
-                error_msg = f"HTTP错误: {response.status_code}"
-                logger.error(f"OTO订单请求失败: {error_msg}")
-                return False, error_msg, None
+                # 尝试解析错误响应
+                try:
+                    error_result = response.json()
+                    error_msg = error_result.get("message", f"HTTP错误: {response.status_code}")
+                    error_code = error_result.get("code", response.status_code)
+                except Exception:
+                    error_msg = f"HTTP错误: {response.status_code}"
+                    error_code = response.status_code
+                
+                logger.error(f"OTO订单请求失败: {error_msg} (状态码: {response.status_code})")
+                return False, f"{error_msg} (状态码: {response.status_code})", None
 
         except httpx.TimeoutException:
             error_msg = "请求超时"
             logger.error(f"OTO订单请求超时: {error_msg}")
             return False, error_msg, None
         except Exception as e:
+            # 提供更详细的错误信息
+            error_type = type(e).__name__
+            error_str = str(e) if str(e) else "未知错误"
+            
             if str(e).startswith("InvalidOperation") or "quantize" in str(e):
                 error_msg = "参数精度错误，请检查数量与价格是否符合精度限制"
+            elif "timeout" in error_str.lower():
+                error_msg = f"请求超时: {error_str}"
+            elif "connection" in error_str.lower():
+                error_msg = f"网络连接错误: {error_str}"
+            elif "401" in error_str or "unauthorized" in error_str.lower():
+                error_msg = f"认证失败: {error_str}"
+            elif "403" in error_str or "forbidden" in error_str.lower():
+                error_msg = f"权限不足: {error_str}"
+            elif "429" in error_str or "rate limit" in error_str.lower():
+                error_msg = f"请求频率限制: {error_str}"
             else:
-                error_msg = f"下单异常: {e!s}"
+                error_msg = f"下单异常 [{error_type}]: {error_str}"
+            
             logger.error(f"OTO订单异常: {error_msg}")
             return False, error_msg, None
 

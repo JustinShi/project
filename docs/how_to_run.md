@@ -124,12 +124,6 @@ strategies:
     # single_trade_amount_usdt: 100
     # trade_interval_seconds: 2
 
-# 用户自定义覆盖（可选）
-user_overrides:
-  - user_id: 1
-    strategies:
-      aop_test:
-        single_trade_amount_usdt: 50  # ← 用户1使用50 USDT
 ```
 
 ---
@@ -137,7 +131,7 @@ user_overrides:
 ## 🔧 参数优先级
 
 ```
-用户覆盖 > 策略配置 > 全局默认
+策略配置 > 全局默认
 ```
 
 ### 示例
@@ -153,14 +147,7 @@ strategies:
     target_token: AOP
     # single_trade_amount_usdt: (未指定，继承全局 200)
 
-# 用户覆盖: 用户1 使用 50 USDT
-user_overrides:
-  - user_id: 1
-    strategies:
-      aop_test:
-        single_trade_amount_usdt: 50
-
-# 最终结果: 用户1 使用 50 USDT
+# 最终结果: 使用 200 USDT
 ```
 
 ---
@@ -242,16 +229,6 @@ strategies:
     target_volume: 5000
     user_ids: [1, 2]
 
-user_overrides:
-  - user_id: 1
-    strategies:
-      aop_test:
-        single_trade_amount_usdt: 100  # ← 用户1: 100 USDT
-        
-  - user_id: 2
-    strategies:
-      aop_test:
-        single_trade_amount_usdt: 50   # ← 用户2: 50 USDT
 ```
 
 **运行**:
@@ -355,9 +332,8 @@ strategies:
 
 **检查优先级**:
 ```
-1. user_overrides 中是否有覆盖？
-2. strategies 中是否有指定？
-3. 使用 global_settings 默认值
+1. strategies 中是否有指定？
+2. 使用 global_settings 默认值
 ```
 
 ### 问题 3: 用户凭证无效
